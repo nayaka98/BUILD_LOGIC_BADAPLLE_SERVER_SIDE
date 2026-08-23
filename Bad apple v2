@@ -16,7 +16,7 @@ local BitBuffer=require(
 local Blocs=workspace:WaitForChild("Blocs")
 local PosOriginPart=workspace:WaitForChild("PosOrigin")
 
-local BLOCK_ID="47"
+local BLOCK_ID="79"
 
 local GRANDEUR_BLOC=3
 
