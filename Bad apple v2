@@ -20,7 +20,7 @@ local TOTAL_BLOCKS=X_SIZE*Y_SIZE
 local STARTUP_URL="https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/badapple_51x39_AB.txt"
 local STARTUP_DURATION=2.5
 local BAD_APPLE_URL="https://raw.githubusercontent.com/niikkzx/Plane-Crazy/main/badapple"
-local RGB_URL=nil
+local RGB_URL="https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/art_rgb"
 
 local START_X=0
 local START_Y=0
