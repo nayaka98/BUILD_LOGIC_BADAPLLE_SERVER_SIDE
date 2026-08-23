@@ -1,122 +1,104 @@
 --==============================================================
--- BUILD LOGIC BAD APPLE TEST
--- 51 x 39 = 1989 BLOCKS
+-- BUILD LOGIC • BAD APPLE
+-- FINAL OPTIMIZED VERSION
 --
--- Startup:
---   File startup menggunakan format frame A/B + separator N
---   Startup diputar selama 5 detik
---   Jika frame startup habis sebelum 5 detik -> diulang
+-- GRID:
+--   51 x 39 = 1989 BLOCKS
 --
--- Bad Apple:
---   Frame dibalik secara VERTICAL (atas <-> bawah)
+-- STARTUP:
+--   AB frame format
+--   Duration: 4 seconds
 --
--- Berdasarkan fungsi asli Building Tool:
--- PosOrigin
--- GrandeurBloc = 3
--- PosMonde2Grille()
--- Position2CodePosition()
+-- BAD APPLE:
+--   AB frame format
+--   Vertical flip preserved
 --
--- Placement:
---   PlacerBloc:InvokeServer(
---       "43",
---       encoded,
---       nil,
---       nil,
---       "X_Y_Z",
---       "A"
---   )
+-- RGB:
+--   RGB text format:
+--   255,255,255,255,255,255,...
+--   1989 RGB values = 1 frame
 --
--- Painting:
---   RemoteEventColorie:FireServer(
---       Color3,
---       "Default",
---       Box,
---       0,
---       2
---   )
+-- FEATURES:
+--   • Build 51 x 39
+--   • 512 build workers
+--   • Build batching
+--   • Block scanning/cache
+--   • Color toggle
+--   • Bad Apple playback
+--   • Custom RGB playback
+--   • Custom RGB URL
+--   • Startup playback
+--   • Stop/cancel
+--   • Draggable UI
+--   • Frame change detection
+--   • Paint workers/batching
 --==============================================================
 
-local Players =
-    game:GetService("Players")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
-local ReplicatedStorage =
-    game:GetService("ReplicatedStorage")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
 
-local UserInputService =
-    game:GetService("UserInputService")
+local Events = ReplicatedStorage:WaitForChild("Events")
+local PlacerBloc = Events:WaitForChild("PlacerBloc")
+local Colorie = Events:WaitForChild("RemoteEventColorie")
 
-local Player =
-    Players.LocalPlayer
+local BitBuffer = require(
+	ReplicatedStorage.Modules:WaitForChild("BitBuffer")
+)
 
-local PlayerGui =
-    Player:WaitForChild("PlayerGui")
-
-local Events =
-    ReplicatedStorage:WaitForChild("Events")
-
-local PlacerBloc =
-    Events:WaitForChild("PlacerBloc")
-
-local Colorie =
-    Events:WaitForChild("RemoteEventColorie")
-
-local BitBuffer =
-    require(
-        ReplicatedStorage.Modules:WaitForChild("BitBuffer")
-    )
-
-local Blocs =
-    workspace:WaitForChild("Blocs")
-
-local PosOriginPart =
-    workspace:WaitForChild("PosOrigin")
+local Blocs = workspace:WaitForChild("Blocs")
+local PosOriginPart = workspace:WaitForChild("PosOrigin")
 
 --==============================================================
 -- CONFIG
 --==============================================================
 
-local BLOCK_ID = "43"
+local BLOCK_ID = "47"
 
 local GRANDEUR_BLOC = 3
 
 local X_SIZE = 51
 local Y_SIZE = 39
+local TOTAL_BLOCKS = X_SIZE * Y_SIZE
 
-local TOTAL_BLOCKS =
-    X_SIZE * Y_SIZE
-
---==============================================================
--- STARTUP FILE
--- Format:
---   A/B characters
---   N = separator frame
---==============================================================
-
+-- Startup
 local STARTUP_URL =
-    "https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/badapple_51x39_AB.txt"
+	"https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/badapple_51x39_AB.txt"
 
-local STARTUP_DURATION = 5
+local STARTUP_DURATION = 4
 
---==============================================================
--- BAD APPLE FILE
---==============================================================
-
+-- Main Bad Apple
 local BAD_APPLE_URL =
-    "https://raw.githubusercontent.com/niikkzx/Plane-Crazy/main/badapple"
+	"https://raw.githubusercontent.com/niikkzx/Plane-Crazy/main/badapple"
 
--- Spawn grid mulai dari 0,0
+-- Default RGB URL
+local RGB_URL =
+	"https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/art_rgb"
+
+-- Grid origin
 local START_X = 0
 local START_Y = 0
 local START_Z = 0
 
--- Default color OFF
-local COLOR_ENABLED = false
-
 -- Playback
+local COLOR_ENABLED = false
 local FRAME_DELAY = 0.05
 
--- Yield tiap beberapa remote
-local PAINT_BATCH = 50
+-- Paint
+local PAINT_BATCH = 64
+local PAINT_WORKERS = 32
+
+-- Build
+local BUILD_WORKERS = 512
+local BUILD_BATCH = 512
+
+-- Scan
+local BUILD_RESCAN_DELAY = 0.15
+local BUILD_RESCAN_ATTEMPTS = 12
+local SCAN_RADIUS = 1.75
 
 --==============================================================
 -- STATE
@@ -124,297 +106,382 @@ local PAINT_BATCH = 50
 
 local Building = false
 local Playing = false
+local Scanning = false
 local StopRequested = false
 
-local BadAppleFrames = nil
-local StartupFrames = nil
+local RunToken = 0
 
--- key = "x_y_z"
--- value = {
---     x,y,z,
---     world,
---     box
--- }
+local BadAppleFrames
+local StartupFrames
+local RGBFrames
+
 local Blocks = {}
-
--- Pixel state frame sebelumnya.
 local PreviousPixels = {}
 
 --==============================================================
--- GUI
+-- GUI CLEANUP
 --==============================================================
 
-local oldGui =
-    PlayerGui:FindFirstChild(
-        "BadAppleBuildLogic"
-    )
+local OldGui = PlayerGui:FindFirstChild("BadAppleBuildLogic")
 
-if oldGui then
-    oldGui:Destroy()
+if OldGui then
+	OldGui:Destroy()
 end
 
-local Gui =
-    Instance.new("ScreenGui")
+--==============================================================
+-- MAIN GUI
+--==============================================================
 
-Gui.Name =
-    "BadAppleBuildLogic"
+local Gui = Instance.new("ScreenGui")
 
+Gui.Name = "BadAppleBuildLogic"
 Gui.ResetOnSpawn = false
 Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 999999
-Gui.ZIndexBehavior =
-    Enum.ZIndexBehavior.Sibling
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 Gui.Parent = PlayerGui
 
-local Window =
-    Instance.new("Frame")
+local Window = Instance.new("Frame")
 
 Window.Name = "Window"
+Window.Size = UDim2.fromOffset(235, 365)
 
-Window.Size =
-    UDim2.fromOffset(
-        225,
-        225
-    )
+Window.Position = UDim2.new(
+	0,
+	12,
+	0.5,
+	-182
+)
 
-Window.Position =
-    UDim2.new(
-        0,
-        12,
-        0.5,
-        -112
-    )
-
-Window.BackgroundColor3 =
-    Color3.fromRGB(
-        22,
-        22,
-        28
-    )
+Window.BackgroundColor3 = Color3.fromRGB(
+	22,
+	22,
+	28
+)
 
 Window.BorderSizePixel = 0
 Window.Active = true
 Window.Parent = Gui
 
-local WindowCorner =
-    Instance.new("UICorner")
-
-WindowCorner.CornerRadius =
-    UDim.new(0,12)
-
+local WindowCorner = Instance.new("UICorner")
+WindowCorner.CornerRadius = UDim.new(0, 12)
 WindowCorner.Parent = Window
 
-local Stroke =
-    Instance.new("UIStroke")
-
+local Stroke = Instance.new("UIStroke")
 Stroke.Thickness = 1
 Stroke.Transparency = 0.35
 Stroke.Parent = Window
 
 --==============================================================
--- HEADER / DRAG
+-- HEADER
 --==============================================================
 
-local Header =
-    Instance.new("TextButton")
+local Header = Instance.new("TextButton")
 
-Header.Size =
-    UDim2.new(
-        1,
-        0,
-        0,
-        38
-    )
-
-Header.Position =
-    UDim2.fromOffset(
-        0,
-        0
-    )
-
+Header.Size = UDim2.new(1, 0, 0, 38)
 Header.BackgroundTransparency = 1
 Header.Text = ""
-
 Header.AutoButtonColor = false
 Header.Active = true
 Header.Parent = Window
 
-local Title =
-    Instance.new("TextLabel")
+local Title = Instance.new("TextLabel")
 
-Title.Size =
-    UDim2.new(
-        1,
-        -16,
-        1,
-        0
-    )
-
-Title.Position =
-    UDim2.fromOffset(
-        8,
-        0
-    )
+Title.Size = UDim2.new(1, -16, 1, 0)
+Title.Position = UDim2.fromOffset(8, 0)
 
 Title.BackgroundTransparency = 1
 
-Title.Text =
-    "BUILD LOGIC • BAD APPLE"
-
-Title.TextColor3 =
-    Color3.new(
-        1,
-        1,
-        1
-    )
-
+Title.Text = "BUILD LOGIC • BAD APPLE"
+Title.TextColor3 = Color3.new(1, 1, 1)
 Title.TextSize = 14
+Title.Font = Enum.Font.GothamBold
 
-Title.Font =
-    Enum.Font.GothamBold
-
-Title.TextXAlignment =
-    Enum.TextXAlignment.Left
-
+Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = Header
 
 --==============================================================
 -- STATUS
 --==============================================================
 
-local Status =
-    Instance.new("TextLabel")
+local Status = Instance.new("TextLabel")
 
-Status.Size =
-    UDim2.new(
-        1,
-        -16,
-        0,
-        28
-    )
-
-Status.Position =
-    UDim2.fromOffset(
-        8,
-        40
-    )
+Status.Size = UDim2.new(1, -16, 0, 28)
+Status.Position = UDim2.fromOffset(8, 40)
 
 Status.BackgroundTransparency = 1
 
-Status.Text =
-    "READY"
-
-Status.TextColor3 =
-    Color3.fromRGB(
-        180,
-        180,
-        190
-    )
+Status.Text = "READY"
+Status.TextColor3 = Color3.fromRGB(
+	180,
+	180,
+	190
+)
 
 Status.TextSize = 10
+Status.Font = Enum.Font.Code
 
-Status.Font =
-    Enum.Font.Code
-
-Status.TextXAlignment =
-    Enum.TextXAlignment.Left
-
+Status.TextXAlignment = Enum.TextXAlignment.Left
 Status.Parent = Window
 
 --==============================================================
--- BUTTON CREATOR
+-- BUTTON HELPER
 --==============================================================
 
-local function MakeButton(
-    text,
-    y
-)
+local function MakeButton(Text, Y)
 
-    local Button =
-        Instance.new("TextButton")
+	local Button = Instance.new("TextButton")
 
-    Button.Size =
-        UDim2.new(
-            1,
-            -16,
-            0,
-            36
-        )
+	Button.Size = UDim2.new(
+		1,
+		-16,
+		0,
+		36
+	)
 
-    Button.Position =
-        UDim2.fromOffset(
-            8,
-            y
-        )
+	Button.Position = UDim2.fromOffset(
+		8,
+		Y
+	)
 
-    Button.BackgroundColor3 =
-        Color3.fromRGB(
-            48,
-            48,
-            58
-        )
+	Button.BackgroundColor3 = Color3.fromRGB(
+		48,
+		48,
+		58
+	)
 
-    Button.BorderSizePixel = 0
+	Button.BorderSizePixel = 0
 
-    Button.Text =
-        text
+	Button.Text = Text
+	Button.TextColor3 = Color3.new(1, 1, 1)
 
-    Button.TextColor3 =
-        Color3.new(
-            1,
-            1,
-            1
-        )
+	Button.TextSize = 11
+	Button.Font = Enum.Font.GothamBold
 
-    Button.TextSize = 11
+	Button.Active = true
+	Button.Parent = Window
 
-    Button.Font =
-        Enum.Font.GothamBold
+	local Corner = Instance.new("UICorner")
 
-    Button.Active = true
-    Button.Parent = Window
+	Corner.CornerRadius = UDim.new(
+		0,
+		8
+	)
 
-    local Corner =
-        Instance.new("UICorner")
+	Corner.Parent = Button
 
-    Corner.CornerRadius =
-        UDim.new(
-            0,
-            8
-        )
-
-    Corner.Parent = Button
-
-    return Button
+	return Button
 end
 
+--==============================================================
+-- BUTTONS
+--==============================================================
+
 local BuildButton =
-    MakeButton(
-        "BUILD 51 × 39",
-        73
-    )
+	MakeButton(
+		"BUILD 51 × 39",
+		73
+	)
 
 local ColorButton =
-    MakeButton(
-        "COLOR : OFF",
-        114
-    )
+	MakeButton(
+		"COLOR : OFF",
+		114
+	)
 
-local PlayButton =
-    MakeButton(
-        "PLAY BAD APPLE",
-        155
-    )
+local PlayBadAppleButton =
+	MakeButton(
+		"PLAY BAD APPLE",
+		155
+	)
+
+local PlayRGBButton =
+	MakeButton(
+		"PLAY CUSTOM RGB",
+		196
+	)
+
+local RGBURLButton =
+	MakeButton(
+		"CUSTOM RGB URL",
+		237
+	)
 
 local StopButton =
-    MakeButton(
-        "STOP",
-        196
-    )
+	MakeButton(
+		"STOP",
+		278
+	)
+
+local ScanButton =
+	MakeButton(
+		"SCAN BLOCK",
+		319
+	)
 
 --==============================================================
--- DRAG SYSTEM
+-- CUSTOM RGB URL WINDOW
+--==============================================================
+
+local URLWindow = Instance.new("Frame")
+
+URLWindow.Name = "RGBURLWindow"
+
+URLWindow.Size = UDim2.fromOffset(
+	320,
+	155
+)
+
+URLWindow.Position = UDim2.new(
+	0.5,
+	-160,
+	0.5,
+	-77
+)
+
+URLWindow.BackgroundColor3 = Color3.fromRGB(
+	20,
+	20,
+	26
+)
+
+URLWindow.BorderSizePixel = 0
+URLWindow.Visible = false
+URLWindow.ZIndex = 20
+
+URLWindow.Parent = Gui
+
+local URLCorner = Instance.new("UICorner")
+
+URLCorner.CornerRadius = UDim.new(
+	0,
+	12
+)
+
+URLCorner.Parent = URLWindow
+
+local URLStroke = Instance.new("UIStroke")
+
+URLStroke.Thickness = 1
+URLStroke.Transparency = 0.25
+URLStroke.Parent = URLWindow
+
+local URLTitle = Instance.new("TextLabel")
+
+URLTitle.Size = UDim2.new(
+	1,
+	-20,
+	0,
+	28
+)
+
+URLTitle.Position = UDim2.fromOffset(
+	10,
+	8
+)
+
+URLTitle.BackgroundTransparency = 1
+
+URLTitle.Text = "CUSTOM RGB URL"
+
+URLTitle.TextColor3 =
+	Color3.new(1, 1, 1)
+
+URLTitle.TextSize = 13
+URLTitle.Font = Enum.Font.GothamBold
+
+URLTitle.TextXAlignment =
+	Enum.TextXAlignment.Left
+
+URLTitle.ZIndex = 21
+URLTitle.Parent = URLWindow
+
+local URLBox = Instance.new("TextBox")
+
+URLBox.Size = UDim2.new(
+	1,
+	-20,
+	0,
+	38
+)
+
+URLBox.Position = UDim2.fromOffset(
+	10,
+	43
+)
+
+URLBox.BackgroundColor3 =
+	Color3.fromRGB(40, 40, 50)
+
+URLBox.BorderSizePixel = 0
+
+URLBox.Text = RGB_URL or ""
+
+URLBox.PlaceholderText =
+	"https://raw.githubusercontent.com/..."
+
+URLBox.TextColor3 =
+	Color3.new(1, 1, 1)
+
+URLBox.PlaceholderColor3 =
+	Color3.fromRGB(130, 130, 140)
+
+URLBox.TextSize = 10
+URLBox.Font = Enum.Font.Code
+
+URLBox.ClearTextOnFocus = false
+URLBox.TextXAlignment = Enum.TextXAlignment.Left
+
+URLBox.ZIndex = 21
+URLBox.Parent = URLWindow
+
+local URLBoxCorner = Instance.new("UICorner")
+
+URLBoxCorner.CornerRadius =
+	UDim.new(0, 7)
+
+URLBoxCorner.Parent = URLBox
+
+local ConfirmButton = Instance.new("TextButton")
+
+ConfirmButton.Size = UDim2.fromOffset(
+	130,
+	34
+)
+
+ConfirmButton.Position = UDim2.new(
+	0.5,
+	-65,
+	1,
+	-44
+)
+
+ConfirmButton.BackgroundColor3 =
+	Color3.fromRGB(65, 65, 80)
+
+ConfirmButton.BorderSizePixel = 0
+
+ConfirmButton.Text = "CONFIRM"
+
+ConfirmButton.TextColor3 =
+	Color3.new(1, 1, 1)
+
+ConfirmButton.TextSize = 11
+ConfirmButton.Font = Enum.Font.GothamBold
+
+ConfirmButton.ZIndex = 21
+ConfirmButton.Parent = URLWindow
+
+local ConfirmCorner = Instance.new("UICorner")
+
+ConfirmCorner.CornerRadius =
+	UDim.new(0, 8)
+
+ConfirmCorner.Parent = ConfirmButton
+
+--==============================================================
+-- DRAGGING
 --==============================================================
 
 local Dragging = false
@@ -422,503 +489,666 @@ local DragStart
 local WindowStart
 local DragInput
 
-Header.InputBegan:Connect(
-    function(Input)
+Header.InputBegan:Connect(function(Input)
 
-        if
-            Input.UserInputType ==
-                Enum.UserInputType.Touch
-            or
-            Input.UserInputType ==
-                Enum.UserInputType.MouseButton1
-        then
+	if
+		Input.UserInputType == Enum.UserInputType.Touch
+		or
+		Input.UserInputType == Enum.UserInputType.MouseButton1
+	then
 
-            Dragging = true
+		Dragging = true
 
-            DragStart =
-                Input.Position
+		DragStart = Input.Position
+		WindowStart = Window.Position
+	end
+end)
 
-            WindowStart =
-                Window.Position
-        end
-    end
-)
+Header.InputEnded:Connect(function(Input)
 
-Header.InputEnded:Connect(
-    function(Input)
+	if
+		Input.UserInputType == Enum.UserInputType.Touch
+		or
+		Input.UserInputType == Enum.UserInputType.MouseButton1
+	then
 
-        if
-            Input.UserInputType ==
-                Enum.UserInputType.Touch
-            or
-            Input.UserInputType ==
-                Enum.UserInputType.MouseButton1
-        then
+		Dragging = false
+	end
+end)
 
-            Dragging = false
-        end
-    end
-)
+Header.InputChanged:Connect(function(Input)
 
-Header.InputChanged:Connect(
-    function(Input)
+	if
+		Input.UserInputType == Enum.UserInputType.Touch
+		or
+		Input.UserInputType == Enum.UserInputType.MouseMovement
+	then
 
-        if
-            Input.UserInputType ==
-                Enum.UserInputType.Touch
-            or
-            Input.UserInputType ==
-                Enum.UserInputType.MouseMovement
-        then
+		DragInput = Input
+	end
+end)
 
-            DragInput = Input
-        end
-    end
-)
+UserInputService.InputChanged:Connect(function(Input)
 
-UserInputService.InputChanged:Connect(
-    function(Input)
+	if not Dragging or Input ~= DragInput then
+		return
+	end
 
-        if
-            not Dragging
-            or
-            Input ~= DragInput
-        then
-            return
-        end
+	local Delta =
+		Input.Position - DragStart
 
-        local Delta =
-            Input.Position
-            - DragStart
-
-        Window.Position =
-            UDim2.new(
-                WindowStart.X.Scale,
-                WindowStart.X.Offset
-                    + Delta.X,
-
-                WindowStart.Y.Scale,
-                WindowStart.Y.Offset
-                    + Delta.Y
-            )
-    end
-)
+	Window.Position =
+		UDim2.new(
+			WindowStart.X.Scale,
+			WindowStart.X.Offset + Delta.X,
+			WindowStart.Y.Scale,
+			WindowStart.Y.Offset + Delta.Y
+		)
+end)
 
 --==============================================================
--- ORIGINAL BUILD LOGIC FUNCTIONS
+-- POSITION UTILITIES
 --==============================================================
 
-local function MathRound(
-    Value
-)
+local function MathRound(Value)
 
-    return math.floor(
-        Value + 0.5
-    )
+	return math.floor(
+		Value + 0.5
+	)
+end
+
+local OriginPosition =
+	PosOriginPart.Position
+
+local function PosMonde2Grille(WorldPosition)
+
+	local X =
+		MathRound(
+			(WorldPosition.X - OriginPosition.X)
+			/
+			GRANDEUR_BLOC
+		)
+
+	local Y =
+		MathRound(
+			(WorldPosition.Y - OriginPosition.Y)
+			/
+			GRANDEUR_BLOC
+		)
+
+	local Z =
+		MathRound(
+			(WorldPosition.Z - OriginPosition.Z)
+			/
+			GRANDEUR_BLOC
+		)
+
+	return Vector3.new(
+		X,
+		Y,
+		Z
+	)
+end
+
+local function GridToWorld(X, Y, Z)
+
+	return
+		OriginPosition
+		+
+		Vector3.new(
+			X * GRANDEUR_BLOC,
+			Y * GRANDEUR_BLOC,
+			Z * GRANDEUR_BLOC
+		)
 end
 
 --==============================================================
--- WORLD -> GRID
+-- POSITION → BASE64
 --==============================================================
 
-local function PosMonde2Grille(
-    WorldPosition
-)
+local function Position2CodePosition(Position)
 
-    local Origin =
-        PosOriginPart.Position
+	local X = math.floor(
+		tonumber(Position.X) or -1
+	)
 
-    local X =
-        MathRound(
-            (
-                WorldPosition.X
-                - Origin.X
-            )
-            / GRANDEUR_BLOC
-        )
+	local Y = math.floor(
+		tonumber(Position.Y) or -1
+	)
 
-    local Y =
-        MathRound(
-            (
-                WorldPosition.Y
-                - Origin.Y
-            )
-            / GRANDEUR_BLOC
-        )
+	local Z = math.floor(
+		tonumber(Position.Z) or -1
+	)
 
-    local Z =
-        MathRound(
-            (
-                WorldPosition.Z
-                - Origin.Z
-            )
-            / GRANDEUR_BLOC
-        )
+	if
+		X < 0 or X >= 256
+		or
+		Y < 0 or Y >= 256
+		or
+		Z < 0 or Z >= 256
+	then
 
-    return
-        Vector3.new(
-            X,
-            Y,
-            Z
-        )
+		return nil
+	end
+
+	local Buffer = BitBuffer:Create()
+
+	Buffer:WriteUnsigned(8, X)
+	Buffer:WriteUnsigned(8, Y)
+	Buffer:WriteUnsigned(8, Z)
+
+	return Buffer:ToBase64()
 end
 
 --==============================================================
--- GRID -> WORLD
+-- RUN TOKEN
 --==============================================================
 
-local function GridToWorld(
-    X,
-    Y,
-    Z
-)
+local function NewRunToken()
 
-    return
-        PosOriginPart.Position
-        + Vector3.new(
-            X * GRANDEUR_BLOC,
-            Y * GRANDEUR_BLOC,
-            Z * GRANDEUR_BLOC
-        )
+	RunToken += 1
+	StopRequested = false
+
+	return RunToken
+end
+
+local function CancelRun()
+
+	RunToken += 1
+	StopRequested = true
+end
+
+local function IsCancelled(Token)
+
+	return
+		StopRequested
+		or
+		Token ~= RunToken
 end
 
 --==============================================================
--- ORIGINAL Position2CodePosition
+-- PLACE BLOCK
 --==============================================================
 
-local function Position2CodePosition(
-    Position
-)
+local function PlaceBlock(Data)
 
-    local X =
-        tonumber(Position.X)
+	local OK, Result =
+		pcall(function()
 
-    local Y =
-        tonumber(Position.Y)
+			return PlacerBloc:InvokeServer(
+				BLOCK_ID,
+				Data.code,
+				nil,
+				nil,
+				Data.key,
+				"A"
+			)
+		end)
 
-    local Z =
-        tonumber(Position.Z)
+	if not OK then
 
-    if
-        not X
-        or
-        not Y
-        or
-        not Z
-    then
+		return false, tostring(Result)
+	end
 
-        return nil
-    end
-
-    X = math.floor(X)
-    Y = math.floor(Y)
-    Z = math.floor(Z)
-
-    if
-        X < 0 or X >= 256
-        or
-        Y < 0 or Y >= 256
-        or
-        Z < 0 or Z >= 256
-    then
-
-        return nil
-    end
-
-    local Buffer =
-        BitBuffer:Create()
-
-    Buffer:WriteUnsigned(
-        8,
-        X
-    )
-
-    Buffer:WriteUnsigned(
-        8,
-        Y
-    )
-
-    Buffer:WriteUnsigned(
-        8,
-        Z
-    )
-
-    return Buffer:ToBase64()
+	return true
 end
 
 --==============================================================
--- GET BOX
+-- CACHE BLOCKS
 --==============================================================
 
-local function FindBoxAt(
-    WorldPosition
-)
+local function CacheBoxesFromWorkspace()
 
-    local Best
-    local BestDistance =
-        math.huge
+	local Found = 0
 
-    for _, Object in
-        ipairs(
-            Blocs:GetDescendants()
-        )
-    do
+	for _, Object in ipairs(
+		Blocs:GetDescendants()
+	) do
 
-        if
-            Object:IsA("BasePart")
-            and
-            Object.Name == "Box"
-        then
+		if
+			Object:IsA("BasePart")
+			and
+			Object.Name == "Box"
+		then
 
-            local Distance =
-                (
-                    Object.Position
-                    - WorldPosition
-                ).Magnitude
+			local Grid =
+				PosMonde2Grille(
+					Object.Position
+				)
 
-            if
-                Distance < BestDistance
-            then
+			local X = Grid.X
+			local Y = Grid.Y
+			local Z = Grid.Z
 
-                BestDistance =
-                    Distance
+			if
+				X >= START_X
+				and
+				X < START_X + X_SIZE
+				and
+				Y >= START_Y
+				and
+				Y < START_Y + Y_SIZE
+				and
+				Z == START_Z
+			then
 
-                Best =
-                    Object
-            end
-        end
-    end
+				local Expected =
+					GridToWorld(
+						X,
+						Y,
+						Z
+					)
 
-    if
-        Best
-        and
-        BestDistance <= 1.75
-    then
+				if
+					(
+						Object.Position -
+						Expected
+					).Magnitude <= SCAN_RADIUS
+				then
 
-        return Best
-    end
+					local Key =
+						string.format(
+							"%d_%d_%d",
+							X,
+							Y,
+							Z
+						)
 
-    return nil
-end
+					if not Blocks[Key] then
 
-local function WaitForBox(
-    WorldPosition
-)
+						Blocks[Key] = {
+							x = X,
+							y = Y,
+							z = Z,
+							key = Key,
 
-    local Deadline =
-        os.clock() + 4
+							code =
+								Position2CodePosition(
+									Grid
+								),
 
-    repeat
+							world = Expected,
+							box = Object
+						}
 
-        local Box =
-            FindBoxAt(
-                WorldPosition
-            )
+						Found += 1
+					end
+				end
+			end
+		end
+	end
 
-        if Box then
-            return Box
-        end
-
-        task.wait(
-            0.05
-        )
-
-    until
-        os.clock()
-        >= Deadline
-
-    return nil
-end
-
---==============================================================
--- PLACE ONE BLOCK
---==============================================================
-
-local function PlaceBlock(
-    GridX,
-    GridY,
-    GridZ
-)
-
-    if
-        GridX < 0 or GridX >= 256
-        or
-        GridY < 0 or GridY >= 256
-        or
-        GridZ < 0 or GridZ >= 256
-    then
-
-        return false,
-            "GRID_OUTSIDE_8BIT"
-    end
-
-    local Grid =
-        Vector3.new(
-            GridX,
-            GridY,
-            GridZ
-        )
-
-    local Code =
-        Position2CodePosition(
-            Grid
-        )
-
-    if not Code then
-
-        return false,
-            "ENCODE_FAILED"
-    end
-
-    local Key =
-        string.format(
-            "%d_%d_%d",
-            GridX,
-            GridY,
-            GridZ
-        )
-
-    local ok,
-          result =
-        pcall(
-            function()
-
-                return
-                    PlacerBloc:InvokeServer(
-                        BLOCK_ID,
-                        Code,
-                        nil,
-                        nil,
-                        Key,
-                        "A"
-                    )
-            end
-        )
-
-    if not ok then
-
-        return false,
-            tostring(result)
-    end
-
-    return true,
-        {
-            x = GridX,
-            y = GridY,
-            z = GridZ,
-            key = Key,
-            code = Code,
-            world =
-                GridToWorld(
-                    GridX,
-                    GridY,
-                    GridZ
-                )
-        }
+	return Found
 end
 
 --==============================================================
--- BUILD 51x39
+-- WAIT FOR BLOCK SYNC
+--==============================================================
+
+local function WaitForBuiltBoxes(Token)
+
+	local Found = 0
+
+	for _ = 1, BUILD_RESCAN_ATTEMPTS do
+
+		if IsCancelled(Token) then
+			return false, Found
+		end
+
+		Found =
+			CacheBoxesFromWorkspace()
+
+		Status.Text =
+			string.format(
+				"SYNC BLOCKS %d/%d",
+				Found,
+				TOTAL_BLOCKS
+			)
+
+		if Found >= TOTAL_BLOCKS then
+			return true, Found
+		end
+
+		task.wait(
+			BUILD_RESCAN_DELAY
+		)
+	end
+
+	return Found > 0, Found
+end
+
+--==============================================================
+-- BUILD DATA
+--==============================================================
+
+local function PrepareBuildData()
+
+	local Data =
+		table.create(TOTAL_BLOCKS)
+
+	local Index = 0
+
+	for Y = START_Y,
+		START_Y + Y_SIZE - 1
+	do
+
+		for X = START_X,
+			START_X + X_SIZE - 1
+		do
+
+			Index += 1
+
+			local Grid =
+				Vector3.new(
+					X,
+					Y,
+					START_Z
+				)
+
+			Data[Index] = {
+				x = X,
+				y = Y,
+				z = START_Z,
+
+				key =
+					string.format(
+						"%d_%d_%d",
+						X,
+						Y,
+						START_Z
+					),
+
+				code =
+					Position2CodePosition(
+						Grid
+					),
+
+				world =
+					GridToWorld(
+						X,
+						Y,
+						START_Z
+					)
+			}
+		end
+	end
+
+	return Data
+end
+
+--==============================================================
+-- BUILD
 --==============================================================
 
 local function BuildGrid()
 
-    if Building then
-        return
-    end
+	if Building or Playing or Scanning then
 
-    Building = true
-    StopRequested = false
+		if Playing then
+			Status.Text = "PLAYBACK ACTIVE"
+		end
 
-    table.clear(
-        Blocks
-    )
+		return
+	end
 
-    Status.Text =
-        "BUILDING 0/"
-        .. TOTAL_BLOCKS
+	Building = true
 
-    local count = 0
+	local Token =
+		NewRunToken()
 
-    for Y = START_Y,
-        START_Y + Y_SIZE - 1
-    do
+	table.clear(Blocks)
 
-        for X = START_X,
-            START_X + X_SIZE - 1
-        do
+	Status.Text =
+		"PREPARING BUILD..."
 
-            if StopRequested then
+	local BuildData =
+		PrepareBuildData()
 
-                Building = false
+	local NextIndex = 0
+	local Completed = 0
+	local Failed = 0
+	local WorkersDone = 0
 
-                Status.Text =
-                    "STOPPED"
+	local function Worker()
 
-                return
-            end
+		while true do
 
-            local Success,
-                  Data =
-                PlaceBlock(
-                    X,
-                    Y,
-                    START_Z
-                )
+			if IsCancelled(Token) then
+				break
+			end
 
-            if Success then
+			local Index =
+				NextIndex + 1
 
-                count += 1
+			NextIndex = Index
 
-                local Box =
-                    WaitForBox(
-                        Data.world
-                    )
+			if Index > TOTAL_BLOCKS then
+				break
+			end
 
-                Data.box =
-                    Box
+			local Data =
+				BuildData[Index]
 
-                Blocks[
-                    Data.key
-                ] =
-                    Data
+			local Success, Error =
+				PlaceBlock(Data)
 
-            else
+			if IsCancelled(Token) then
+				break
+			end
 
-                warn(
-                    "[BUILD]",
-                    X,
-                    Y,
-                    Data
-                )
-            end
+			if Success then
 
-            Status.Text =
-                string.format(
-                    "BUILD %d/%d",
-                    count,
-                    TOTAL_BLOCKS
-                )
+				Completed += 1
 
-            task.wait()
+			else
 
-        end
-    end
+				Failed += 1
 
-    Building = false
+				warn(
+					"[BUILD]",
+					Data.x,
+					Data.y,
+					Error
+				)
+			end
 
-    Status.Text =
-        string.format(
-            "READY • %d BLOCKS",
-            count
-        )
+			if
+				Completed % BUILD_BATCH == 0
+			then
 
-    print(
-        "BAD APPLE GRID:",
-        count,
-        "/",
-        TOTAL_BLOCKS
-    )
+				Status.Text =
+					string.format(
+						"BUILD %d/%d",
+						Completed,
+						TOTAL_BLOCKS
+					)
+
+				task.wait()
+			end
+		end
+
+		WorkersDone += 1
+	end
+
+	for _ = 1, BUILD_WORKERS do
+
+		task.spawn(
+			Worker
+		)
+	end
+
+	while WorkersDone < BUILD_WORKERS do
+
+		if IsCancelled(Token) then
+
+			Building = false
+			Status.Text = "STOPPED"
+
+			return
+		end
+
+		Status.Text =
+			string.format(
+				"BUILD %d/%d",
+				Completed,
+				TOTAL_BLOCKS
+			)
+
+		task.wait()
+	end
+
+	if IsCancelled(Token) then
+
+		Building = false
+		Status.Text = "STOPPED"
+
+		return
+	end
+
+	Status.Text =
+		string.format(
+			"PLACED %d/%d",
+			Completed,
+			TOTAL_BLOCKS
+		)
+
+	task.wait(0.25)
+
+	if IsCancelled(Token) then
+
+		Building = false
+		Status.Text = "STOPPED"
+
+		return
+	end
+
+	local Synced, Found =
+		WaitForBuiltBoxes(Token)
+
+	Building = false
+
+	if not Synced then
+
+		if IsCancelled(Token) then
+
+			Status.Text = "STOPPED"
+
+		else
+
+			Status.Text =
+				string.format(
+					"BUILD DONE • %d BOX",
+					Found
+				)
+		end
+
+		return
+	end
+
+	Status.Text =
+		string.format(
+			"READY • %d/%d BLOCKS",
+			Found,
+			TOTAL_BLOCKS
+		)
+
+	print(
+		"BUILD:",
+		Completed,
+		"/",
+		TOTAL_BLOCKS
+	)
+
+	print(
+		"FAILED:",
+		Failed
+	)
+
+	print(
+		"CACHED:",
+		Found
+	)
+end
+
+--==============================================================
+-- SCAN
+--==============================================================
+
+local function ScanBlocks()
+
+	if Scanning or Building or Playing then
+
+		if Building then
+			Status.Text = "BUILDING..."
+
+		elseif Playing then
+			Status.Text = "PLAYBACK ACTIVE"
+		end
+
+		return
+	end
+
+	Scanning = true
+
+	local Token =
+		NewRunToken()
+
+	table.clear(Blocks)
+
+	Status.Text =
+		"SCANNING BLOCKS..."
+
+	local Found =
+		CacheBoxesFromWorkspace()
+
+	if IsCancelled(Token) then
+
+		Scanning = false
+		Status.Text = "SCAN STOPPED"
+
+		return
+	end
+
+	Scanning = false
+
+	Status.Text =
+		string.format(
+			"SCANNED • %d/%d BLOCKS",
+			Found,
+			TOTAL_BLOCKS
+		)
+end
+
+--==============================================================
+-- HTTP LOADER
+--==============================================================
+
+local function LoadText(URL)
+
+	local OK, Text =
+		pcall(function()
+
+			return game:HttpGet(
+				URL,
+				true
+			)
+		end)
+
+	if not OK then
+		return nil
+	end
+
+	-- UTF-8 BOM
+	Text =
+		Text:gsub(
+			"\239\187\191",
+			""
+		)
+
+	return Text:gsub(
+		"\r",
+		""
+	)
 end
 
 --==============================================================
@@ -927,50 +1157,60 @@ end
 
 local function LoadBadApple()
 
-    if BadAppleFrames then
-        return true
-    end
+	if BadAppleFrames then
+		return true
+	end
 
-    Status.Text =
-        "DOWNLOADING BAD APPLE..."
+	Status.Text =
+		"LOADING BAD APPLE..."
 
-    local ok,
-          Text =
-        pcall(
-            function()
+	local Text =
+		LoadText(
+			BAD_APPLE_URL
+		)
 
-                return
-                    game:HttpGet(
-                        BAD_APPLE_URL
-                    )
-            end
-        )
+	if not Text then
 
-    if not ok then
+		Status.Text =
+			"DOWNLOAD FAILED"
 
-        warn(
-            "Bad Apple download:",
-            Text
-        )
+		return false
+	end
 
-        Status.Text =
-            "DOWNLOAD FAILED"
+	Text =
+		Text:gsub(
+			"%s",
+			""
+		)
 
-        return false
-    end
+	local RawFrames =
+		string.split(
+			Text,
+			"N"
+		)
 
-    BadAppleFrames =
-        string.split(
-            Text,
-            "N"
-        )
+	local Frames = {}
 
-    Status.Text =
-        "LOADED "
-        .. #BadAppleFrames
-        .. " FRAMES"
+	for _, Frame in ipairs(RawFrames) do
 
-    return true
+		if #Frame == TOTAL_BLOCKS then
+
+			Frames[#Frames + 1] =
+				Frame
+		end
+	end
+
+	if #Frames == 0 then
+
+		Status.Text =
+			"BAD APPLE EMPTY"
+
+		return false
+	end
+
+	BadAppleFrames = Frames
+
+	return true
 end
 
 --==============================================================
@@ -979,636 +1219,1267 @@ end
 
 local function LoadStartup()
 
-    if StartupFrames then
-        return true
-    end
+	if StartupFrames then
+		return true
+	end
 
-    Status.Text =
-        "DOWNLOADING STARTUP..."
+	Status.Text =
+		"LOADING STARTUP..."
 
-    local ok,
-          Text =
-        pcall(
-            function()
+	local Text =
+		LoadText(
+			STARTUP_URL
+		)
 
-                return
-                    game:HttpGet(
-                        STARTUP_URL
-                    )
-            end
-        )
+	if not Text then
 
-    if not ok then
+		Status.Text =
+			"STARTUP DOWNLOAD FAILED"
 
-        warn(
-            "Startup download:",
-            Text
-        )
+		return false
+	end
 
-        Status.Text =
-            "STARTUP DOWNLOAD FAILED"
+	Text =
+		Text:gsub(
+			"%s",
+			""
+		)
 
-        return false
-    end
+	local RawFrames =
+		string.split(
+			Text,
+			"N"
+		)
 
-    StartupFrames =
-        string.split(
-            Text,
-            "N"
-        )
+	local Frames = {}
 
-    if
-        #StartupFrames == 0
-    then
+	for _, Frame in ipairs(RawFrames) do
 
-        Status.Text =
-            "STARTUP EMPTY"
+		if #Frame == TOTAL_BLOCKS then
 
-        return false
-    end
+			Frames[#Frames + 1] =
+				Frame
+		end
+	end
 
-    return true
+	if #Frames == 0 then
+
+		Status.Text =
+			"STARTUP EMPTY"
+
+		return false
+	end
+
+	StartupFrames = Frames
+
+	return true
 end
+
+--==============================================================
+-- RGB PARSER
+--==============================================================
+
+local function ParseRGBFrame(Text)
+
+	local Pixels =
+		table.create(TOTAL_BLOCKS)
+
+	local Count = 0
+
+	for R, G, B in Text:gmatch(
+		"(%d+)%s*,%s*(%d+)%s*,%s*(%d+)"
+	) do
+
+		R = tonumber(R)
+		G = tonumber(G)
+		B = tonumber(B)
+
+		if
+			R and G and B
+			and R >= 0 and R <= 255
+			and G >= 0 and G <= 255
+			and B >= 0 and B <= 255
+		then
+
+			Count += 1
+
+			Pixels[Count] =
+				Color3.fromRGB(
+					R,
+					G,
+					B
+				)
+
+			if Count > TOTAL_BLOCKS then
+				return nil
+			end
+		end
+	end
+
+	if Count ~= TOTAL_BLOCKS then
+		return nil
+	end
+
+	return Pixels
+end
+
+--==============================================================
+-- LOAD RGB
+--==============================================================
+
+local function LoadRGB()
+
+	if RGBFrames then
+		return true
+	end
+
+	if not RGB_URL or RGB_URL == "" then
+
+		Status.Text =
+			"RGB URL EMPTY"
+
+		return false
+	end
+
+	Status.Text =
+		"LOADING RGB..."
+
+	local Text =
+		LoadText(
+			RGB_URL
+		)
+
+	if not Text then
+
+		Status.Text =
+			"RGB DOWNLOAD FAILED"
+
+		return false
+	end
+
+	Text =
+		Text:gsub(
+			"%s",
+			""
+		)
+
+	local RawFrames =
+		string.split(
+			Text,
+			"N"
+		)
+
+	local Frames = {}
+
+	for _, FrameText in ipairs(RawFrames) do
+
+		local Frame =
+			ParseRGBFrame(
+				FrameText
+			)
+
+		if Frame then
+
+			Frames[#Frames + 1] =
+				Frame
+		end
+	end
+
+	if #Frames == 0 then
+
+		Status.Text =
+			"RGB EMPTY"
+
+		return false
+	end
+
+	RGBFrames = Frames
+
+	return true
+end
+
+--==============================================================
+-- COLORS
+--==============================================================
+
+local BLACK =
+	Color3.new(0, 0, 0)
+
+local WHITE =
+	Color3.new(1, 1, 1)
 
 --==============================================================
 -- PAINT
 --==============================================================
 
-local BLACK =
-    Color3.new(
-        0,
-        0,
-        0
-    )
+local function PaintBox(Box, Color)
 
-local WHITE =
-    Color3.new(
-        1,
-        1,
-        1
-    )
+	if not Box or not Box.Parent then
+		return
+	end
 
-local function PaintBox(
-    Box,
-    Color
-)
+	pcall(function()
 
-    if
-        not Box
-        or
-        not Box.Parent
-    then
-
-        return
-    end
-
-    pcall(
-        function()
-
-            Colorie:FireServer(
-                Color,
-                "Default",
-                Box,
-                0,
-                2
-            )
-        end
-    )
+		Colorie:FireServer(
+			Color,
+			"Default",
+			Box,
+			0,
+			2
+		)
+	end)
 end
 
 --==============================================================
--- PLAY STARTUP
---
--- Startup file boleh memiliki durasi/frame count apa saja.
--- Playback tetap berlangsung selama STARTUP_DURATION.
---
--- Jika frame habis sebelum 5 detik:
---   kembali ke frame 1.
---
--- Jika startup punya frame lebih panjang:
---   hanya diputar sampai 5 detik.
+-- FRAME ACCESS
 --==============================================================
 
-local function PlayStartup()
+local function GetCharacter(Frame, X, Y)
 
-    if not LoadStartup() then
-        return false
-    end
+	local FrameY =
+		Y_SIZE - 1 - Y
 
-    Status.Text =
-        "STARTUP..."
+	local Index =
+		FrameY * X_SIZE
+		+
+		X
+		+
+		1
 
-    local StartTime =
-        os.clock()
+	local Byte =
+		string.byte(
+			Frame,
+			Index
+		)
 
-    local FrameIndex = 1
+	if Byte == 65 then
+		return "A"
+	end
 
-    while
-        os.clock() - StartTime
-        < STARTUP_DURATION
-    do
+	if Byte == 66 then
+		return "B"
+	end
 
-        if StopRequested then
-            return false
-        end
+	return nil
+end
 
-        local Frame =
-            StartupFrames[
-                FrameIndex
-            ]
+local function GetRGBColor(Frame, X, Y)
 
-        if Frame then
+	local FrameY =
+		Y_SIZE - 1 - Y
 
-            local Calls = 0
+	local Index =
+		FrameY * X_SIZE
+		+
+		X
+		+
+		1
 
-            -- EXACT 51 × 39
-            for Y = 0,
-                Y_SIZE - 1
-            do
-
-                if StopRequested then
-                    return false
-                end
-
-                -- Sama seperti Bad Apple:
-                -- vertical flip
-                local FrameY =
-                    Y_SIZE - 1 - Y
-
-                local Row =
-                    string.sub(
-                        Frame,
-
-                        FrameY * X_SIZE + 1,
-
-                        (FrameY + 1)
-                            * X_SIZE
-                    )
-
-                for X = 0,
-                    X_SIZE - 1
-                do
-
-                    if StopRequested then
-                        return false
-                    end
-
-                    local Character =
-                        string.sub(
-                            Row,
-                            X + 1,
-                            X + 1
-                        )
-
-                    if
-                        Character == "A"
-                        or
-                        Character == "B"
-                    then
-
-                        local Key =
-                            string.format(
-                                "%d_%d_%d",
-                                X + START_X,
-                                Y + START_Y,
-                                START_Z
-                            )
-
-                        local Data =
-                            Blocks[Key]
-
-                        if Data then
-
-                            if
-                                Character == "A"
-                            then
-
-                                PaintBox(
-                                    Data.box,
-                                    WHITE
-                                )
-
-                            else
-
-                                PaintBox(
-                                    Data.box,
-                                    BLACK
-                                )
-
-                            end
-
-                            Calls += 1
-
-                            if
-                                Calls >= PAINT_BATCH
-                            then
-
-                                Calls = 0
-
-                                task.wait()
-
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        local Elapsed =
-            os.clock() - StartTime
-
-        Status.Text =
-            string.format(
-                "STARTUP %.1f/%.1f",
-                math.min(
-                    Elapsed,
-                    STARTUP_DURATION
-                ),
-                STARTUP_DURATION
-            )
-
-        FrameIndex += 1
-
-        -- Loop startup kalau frame sudah habis.
-        if
-            FrameIndex > #StartupFrames
-        then
-
-            FrameIndex = 1
-
-        end
-
-        task.wait(
-            FRAME_DELAY
-        )
-    end
-
-    Status.Text =
-        "STARTUP DONE"
-
-    return true
+	return Frame[Index]
 end
 
 --==============================================================
--- PLAY BAD APPLE
+-- PREPARE AB FRAME
 --==============================================================
 
-local function PlayBadApple()
+local function PrepareABFrame(
+	Frame,
+	FirstFrame
+)
 
-    if Playing then
-        return
-    end
+	local Workers =
+		table.create(
+			PAINT_WORKERS
+		)
 
-    if
-        next(Blocks) == nil
-    then
+	local Counts =
+		table.create(
+			PAINT_WORKERS,
+			0
+		)
 
-        Status.Text =
-            "BUILD FIRST"
+	for Worker = 1,
+		PAINT_WORKERS
+	do
 
-        return
-    end
+		Workers[Worker] = {}
+	end
 
-    if not ColorEnabled then
+	local Position = 0
 
-        Status.Text =
-            "COLOR IS OFF"
+	for Y = 0,
+		Y_SIZE - 1
+	do
 
-        return
-    end
+		for X = 0,
+			X_SIZE - 1
+		do
 
-    Playing = true
-    StopRequested = false
+			Position += 1
 
-    PlayButton.Text =
-        "PLAYING..."
+			local Worker =
+				(
+					(Position - 1)
+					%
+					PAINT_WORKERS
+				)
+				+
+				1
 
-    --==========================================================
-    -- STARTUP 5 DETIK
-    --==========================================================
+			local Character =
+				GetCharacter(
+					Frame,
+					X,
+					Y
+				)
 
-    if not PlayStartup() then
+			if
+				Character == "A"
+				or
+				Character == "B"
+			then
 
-        Playing = false
+				local Key =
+					string.format(
+						"%d_%d_%d",
+						X + START_X,
+						Y + START_Y,
+						START_Z
+					)
 
-        StopRequested = false
+				local Data =
+					Blocks[Key]
 
-        PlayButton.Text =
-            "PLAY BAD APPLE"
+				if Data then
 
-        return
-    end
+					local Old =
+						PreviousPixels[Key]
 
-    if StopRequested then
+					if
+						FirstFrame
+						or
+						Old ~= Character
+					then
 
-        Playing = false
+						local Count =
+							Counts[Worker] + 1
 
-        StopRequested = false
+						Counts[Worker] =
+							Count
 
-        PlayButton.Text =
-            "PLAY BAD APPLE"
+						Workers[Worker][Count] = {
 
-        Status.Text =
-            "STOPPED"
+							Box = Data.box,
 
-        return
-    end
+							Color =
+								Character == "A"
+								and WHITE
+								or BLACK,
 
-    --==========================================================
-    -- LOAD BAD APPLE UTAMA
-    --==========================================================
+							Key = Key,
 
-    if not LoadBadApple() then
+							Value = Character
+						}
+					end
+				end
+			end
+		end
+	end
 
-        Playing = false
-
-        StopRequested = false
-
-        PlayButton.Text =
-            "PLAY BAD APPLE"
-
-        return
-    end
-
-    --==========================================================
-    -- BAD APPLE FRAME LOOP
-    --==========================================================
-
-    table.clear(
-        PreviousPixels
-    )
-
-    for FrameNumber,
-        Frame in
-        ipairs(
-            BadAppleFrames
-        )
-    do
-
-        if StopRequested then
-            break
-        end
-
-        local Calls = 0
-
-        -- EXACT 51 × 39
-        for Y = 0,
-            Y_SIZE - 1
-        do
-
-            if StopRequested then
-                break
-            end
-
-            --==================================================
-            -- FIX ROTASI VERTICAL
-            --
-            -- File Bad Apple:
-            --   FrameY 0  = bagian ATAS
-            --
-            -- Roblox Grid:
-            --   Y 0      = bagian BAWAH
-            --
-            -- Maka dibalik:
-            --   FrameY = Y_SIZE - 1 - Y
-            --==================================================
-
-            local FrameY =
-                Y_SIZE - 1 - Y
-
-            local Row =
-                string.sub(
-                    Frame,
-
-                    FrameY * X_SIZE + 1,
-
-                    (FrameY + 1)
-                        * X_SIZE
-                )
-
-            for X = 0,
-                X_SIZE - 1
-            do
-
-                if StopRequested then
-                    break
-                end
-
-                local Character =
-                    string.sub(
-                        Row,
-                        X + 1,
-                        X + 1
-                    )
-
-                if
-                    Character == "A"
-                    or
-                    Character == "B"
-                then
-
-                    local Key =
-                        string.format(
-                            "%d_%d_%d",
-                            X + START_X,
-                            Y + START_Y,
-                            START_Z
-                        )
-
-                    local Data =
-                        Blocks[Key]
-
-                    if Data then
-
-                        -- Hanya kirim jika berubah.
-                        if
-                            PreviousPixels[Key]
-                            ~= Character
-                        then
-
-                            PreviousPixels[Key] =
-                                Character
-
-                            if
-                                Character == "A"
-                            then
-
-                                PaintBox(
-                                    Data.box,
-                                    WHITE
-                                )
-
-                            else
-
-                                PaintBox(
-                                    Data.box,
-                                    BLACK
-                                )
-
-                            end
-
-                            Calls += 1
-
-                            if
-                                Calls >= PAINT_BATCH
-                            then
-
-                                Calls = 0
-
-                                task.wait()
-
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        Status.Text =
-            string.format(
-                "BAD APPLE %d/%d",
-                FrameNumber,
-                #BadAppleFrames
-            )
-
-        task.wait(
-            FRAME_DELAY
-        )
-    end
-
-    Playing = false
-    StopRequested = false
-
-    PlayButton.Text =
-        "PLAY BAD APPLE"
-
-    Status.Text =
-        "PLAYBACK FINISHED"
+	return Workers, Counts
 end
 
 --==============================================================
--- BUTTON EVENTS
+-- PREPARE RGB FRAME
 --==============================================================
 
-BuildButton.Activated:Connect(
-    function()
-
-        if Building then
-            return
-        end
-
-        task.spawn(
-            BuildGrid
-        )
-    end
+local function PrepareRGBFrame(
+	Frame,
+	FirstFrame
 )
 
-ColorButton.Activated:Connect(
-    function()
+	local Workers =
+		table.create(
+			PAINT_WORKERS
+		)
 
-        ColorEnabled =
-            not ColorEnabled
+	local Counts =
+		table.create(
+			PAINT_WORKERS,
+			0
+		)
 
-        if ColorEnabled then
+	for Worker = 1,
+		PAINT_WORKERS
+	do
 
-            ColorButton.Text =
-                "COLOR : ON"
+		Workers[Worker] = {}
+	end
 
-        else
+	local Position = 0
 
-            ColorButton.Text =
-                "COLOR : OFF"
+	for Y = 0,
+		Y_SIZE - 1
+	do
 
-        end
-    end
-)
+		for X = 0,
+			X_SIZE - 1
+		do
 
-PlayButton.Activated:Connect(
-    function()
+			Position += 1
 
-        if Playing then
+			local Worker =
+				(
+					(Position - 1)
+					%
+					PAINT_WORKERS
+				)
+				+
+				1
 
-            StopRequested = true
+			local Key =
+				string.format(
+					"%d_%d_%d",
+					X + START_X,
+					Y + START_Y,
+					START_Z
+				)
 
-            return
-        end
+			local Data =
+				Blocks[Key]
 
-        task.spawn(
-            PlayBadApple
-        )
-    end
-)
+			local Color =
+				GetRGBColor(
+					Frame,
+					X,
+					Y
+				)
 
-StopButton.Activated:Connect(
-    function()
+			if Data and Color then
 
-        StopRequested = true
+				local Old =
+					PreviousPixels[Key]
 
-        Status.Text =
-            "STOPPING..."
+				local Changed =
+					FirstFrame
 
-        PlayButton.Text =
-            "PLAY BAD APPLE"
-    end
-)
+				if not Changed and Old then
+
+					Changed =
+						Old.R ~= Color.R
+						or
+						Old.G ~= Color.G
+						or
+						Old.B ~= Color.B
+				end
+
+				if Changed then
+
+					local Count =
+						Counts[Worker] + 1
+
+					Counts[Worker] =
+						Count
+
+					Workers[Worker][Count] = {
+
+						Box = Data.box,
+						Color = Color,
+						Key = Key,
+
+						Value = {
+							R = Color.R,
+							G = Color.G,
+							B = Color.B
+						}
+					}
+				end
+			end
+		end
+	end
+
+	return Workers, Counts
+end
 
 --==============================================================
--- INITIAL
+-- COMMIT FRAME
 --==============================================================
 
-math.randomseed(
-    math.floor(
-        os.clock()
-        * 1000000
-    )
+local function CommitFrame(
+	Workers,
+	Counts
+)
+
+	for Worker = 1,
+		PAINT_WORKERS
+	do
+
+		local Items =
+			Workers[Worker]
+
+		local Count =
+			Counts[Worker]
+
+		for Index = 1,
+			Count
+		do
+
+			local Item =
+				Items[Index]
+
+			PreviousPixels[
+				Item.Key
+			] =
+				Item.Value
+		end
+	end
+end
+
+--==============================================================
+-- PAINT PREPARED FRAME
+--==============================================================
+
+local function PaintPreparedFrame(
+	Workers,
+	Counts,
+	Token
+)
+
+	local ActiveWorkers = 0
+	local FinishedWorkers = 0
+
+	for Worker = 1,
+		PAINT_WORKERS
+	do
+
+		local Count =
+			Counts[Worker]
+
+		if Count > 0 then
+
+			ActiveWorkers += 1
+
+			task.spawn(function()
+
+				local Items =
+					Workers[Worker]
+
+				local Index = 1
+
+				while Index <= Count do
+
+					if IsCancelled(Token) then
+						break
+					end
+
+					local EndIndex =
+						math.min(
+							Index
+								+
+								PAINT_BATCH
+								-
+								1,
+
+							Count
+						)
+
+					for ItemIndex =
+						Index,
+						EndIndex
+					do
+
+						if IsCancelled(Token) then
+							break
+						end
+
+						local Item =
+							Items[ItemIndex]
+
+						PaintBox(
+							Item.Box,
+							Item.Color
+						)
+					end
+
+					Index =
+						EndIndex + 1
+
+					if
+						Index <= Count
+						and
+						not IsCancelled(Token)
+					then
+
+						task.wait()
+					end
+				end
+
+				FinishedWorkers += 1
+			end)
+		end
+	end
+
+	if ActiveWorkers == 0 then
+
+		return not IsCancelled(Token)
+	end
+
+	while FinishedWorkers <
+		ActiveWorkers
+	do
+
+		if IsCancelled(Token) then
+			return false
+		end
+
+		task.wait()
+	end
+
+	return not IsCancelled(Token)
+end
+
+--==============================================================
+-- PAINT FRAME
+--==============================================================
+
+local function PaintFrame(
+	Frame,
+	FirstFrame,
+	Token,
+	RGBMode
+)
+
+	local Workers
+	local Counts
+
+	if RGBMode then
+
+		Workers, Counts =
+			PrepareRGBFrame(
+				Frame,
+				FirstFrame
+			)
+
+	else
+
+		Workers, Counts =
+			PrepareABFrame(
+				Frame,
+				FirstFrame
+			)
+	end
+
+	local TotalChanges = 0
+
+	for Worker = 1,
+		PAINT_WORKERS
+	do
+
+		TotalChanges +=
+			Counts[Worker]
+	end
+
+	if TotalChanges == 0 then
+		return true
+	end
+
+	local OK =
+		PaintPreparedFrame(
+			Workers,
+			Counts,
+			Token
+		)
+
+	if
+		not OK
+		or
+		IsCancelled(Token)
+	then
+
+		return false
+	end
+
+	CommitFrame(
+		Workers,
+		Counts
+	)
+
+	return true
+end
+
+--==============================================================
+-- RESET PIXEL CACHE
+--==============================================================
+
+local function ResetPixelState()
+
+	table.clear(
+		PreviousPixels
+	)
+end
+
+--==============================================================
+-- PREPARE PLAYBACK
+--==============================================================
+
+local function PreparePlayback(RGBMode)
+
+	if not LoadStartup() then
+		return false
+	end
+
+	if RGBMode then
+		return LoadRGB()
+	end
+
+	return LoadBadApple()
+end
+
+--==============================================================
+-- STARTUP PLAYBACK
+--==============================================================
+
+local function PlayStartup(Token)
+
+	local StartTime =
+		os.clock()
+
+	local FrameIndex = 1
+	local FirstFrame = true
+
+	while true do
+
+		if IsCancelled(Token) then
+			return false
+		end
+
+		local Frame =
+			StartupFrames[FrameIndex]
+
+		if not Frame then
+
+			FrameIndex = 1
+			Frame = StartupFrames[1]
+		end
+
+		local FrameStart =
+			os.clock()
+
+		local OK =
+			PaintFrame(
+				Frame,
+				FirstFrame,
+				Token,
+				false
+			)
+
+		FirstFrame = false
+
+		if not OK then
+			return false
+		end
+
+		FrameIndex += 1
+
+		if
+			FrameIndex >
+			#StartupFrames
+		then
+
+			FrameIndex = 1
+		end
+
+		local Remaining =
+			FRAME_DELAY
+			-
+			(
+				os.clock()
+				-
+				FrameStart
+			)
+
+		if Remaining > 0 then
+
+			task.wait(
+				Remaining
+			)
+		end
+
+		local Elapsed =
+			os.clock()
+			-
+			StartTime
+
+		Status.Text =
+			string.format(
+				"STARTUP %.1f/%.1f",
+				math.min(
+					Elapsed,
+					STARTUP_DURATION
+				),
+				STARTUP_DURATION
+			)
+
+		if
+			Elapsed >=
+			STARTUP_DURATION
+		then
+
+			return true
+		end
+	end
+end
+
+--==============================================================
+-- PLAYBACK
+--==============================================================
+
+local function PlayMode(RGBMode)
+
+	if Playing then
+		return
+	end
+
+	if Building then
+
+		Status.Text =
+			"BUILDING..."
+
+		return
+	end
+
+	if Scanning then
+
+		Status.Text =
+			"SCANNING..."
+
+		return
+	end
+
+	if next(Blocks) == nil then
+
+		Status.Text =
+			"BUILD OR SCAN FIRST"
+
+		return
+	end
+
+	if not COLOR_ENABLED then
+
+		Status.Text =
+			"COLOR IS OFF"
+
+		return
+	end
+
+	Playing = true
+
+	local Token =
+		NewRunToken()
+
+	ResetPixelState()
+
+	if RGBMode then
+
+		PlayRGBButton.Text =
+			"PREPARING RGB..."
+
+	else
+
+		PlayBadAppleButton.Text =
+			"PREPARING..."
+	end
+
+	if not PreparePlayback(RGBMode) then
+
+		Playing = false
+		StopRequested = false
+
+		PlayBadAppleButton.Text =
+			"PLAY BAD APPLE"
+
+		PlayRGBButton.Text =
+			"PLAY CUSTOM RGB"
+
+		return
+	end
+
+	if IsCancelled(Token) then
+
+		Playing = false
+
+		PlayBadAppleButton.Text =
+			"PLAY BAD APPLE"
+
+		PlayRGBButton.Text =
+			"PLAY CUSTOM RGB"
+
+		Status.Text =
+			"STOPPED"
+
+		return
+	end
+
+	if RGBMode then
+
+		PlayRGBButton.Text =
+			"STARTUP..."
+
+	else
+
+		PlayBadAppleButton.Text =
+			"STARTUP..."
+	end
+
+	if not PlayStartup(Token) then
+
+		Playing = false
+
+		PlayBadAppleButton.Text =
+			"PLAY BAD APPLE"
+
+		PlayRGBButton.Text =
+			"PLAY CUSTOM RGB"
+
+		Status.Text =
+			"STOPPED"
+
+		return
+	end
+
+	if IsCancelled(Token) then
+
+		Playing = false
+
+		PlayBadAppleButton.Text =
+			"PLAY BAD APPLE"
+
+		PlayRGBButton.Text =
+			"PLAY CUSTOM RGB"
+
+		Status.Text =
+			"STOPPED"
+
+		return
+	end
+
+	local Frames =
+		RGBMode
+		and RGBFrames
+		or BadAppleFrames
+
+	local Label =
+		RGBMode
+		and "RGB"
+		or "BAD APPLE"
+
+	Status.Text =
+		RGBMode
+		and "RGB PLAYBACK STARTING..."
+		or "BAD APPLE STARTING..."
+
+	local FirstMainFrame = true
+
+	for FrameNumber, Frame in ipairs(Frames) do
+
+		if IsCancelled(Token) then
+			break
+		end
+
+		local FrameStart =
+			os.clock()
+
+		local OK =
+			PaintFrame(
+				Frame,
+				FirstMainFrame,
+				Token,
+				RGBMode
+			)
+
+		FirstMainFrame = false
+
+		if not OK then
+			break
+		end
+
+		Status.Text =
+			string.format(
+				"%s %d/%d",
+				Label,
+				FrameNumber,
+				#Frames
+			)
+
+		local Remaining =
+			FRAME_DELAY
+			-
+			(
+				os.clock()
+				-
+				FrameStart
+			)
+
+		if Remaining > 0 then
+
+			task.wait(
+				Remaining
+			)
+		end
+	end
+
+	Playing = false
+
+	Status.Text =
+		IsCancelled(Token)
+		and "STOPPED"
+		or "PLAYBACK FINISHED"
+
+	PlayBadAppleButton.Text =
+		"PLAY BAD APPLE"
+
+	PlayRGBButton.Text =
+		"PLAY CUSTOM RGB"
+
+	StopRequested = false
+end
+
+--==============================================================
+-- BUILD BUTTON
+--==============================================================
+
+BuildButton.Activated:Connect(function()
+
+	if
+		Building
+		or
+		Playing
+		or
+		Scanning
+	then
+
+		return
+	end
+
+	task.spawn(
+		BuildGrid
+	)
+end)
+
+--==============================================================
+-- COLOR BUTTON
+--==============================================================
+
+ColorButton.Activated:Connect(function()
+
+	COLOR_ENABLED =
+		not COLOR_ENABLED
+
+	ColorButton.Text =
+		COLOR_ENABLED
+		and "COLOR : ON"
+		or "COLOR : OFF"
+end)
+
+--==============================================================
+-- BAD APPLE BUTTON
+--==============================================================
+
+PlayBadAppleButton.Activated:Connect(function()
+
+	if Playing then
+		return
+	end
+
+	if Building or Scanning then
+		return
+	end
+
+	task.spawn(
+		PlayMode,
+		false
+	)
+end)
+
+--==============================================================
+-- RGB BUTTON
+--==============================================================
+
+PlayRGBButton.Activated:Connect(function()
+
+	if Playing then
+		return
+	end
+
+	if Building or Scanning then
+		return
+	end
+
+	task.spawn(
+		PlayMode,
+		true
+	)
+end)
+
+--==============================================================
+-- CUSTOM RGB URL BUTTON
+--==============================================================
+
+RGBURLButton.Activated:Connect(function()
+
+	if
+		Playing
+		or
+		Building
+		or
+		Scanning
+	then
+
+		return
+	end
+
+	URLBox.Text =
+		RGB_URL or ""
+
+	URLWindow.Visible = true
+
+	URLBox:CaptureFocus()
+end)
+
+--==============================================================
+-- CONFIRM RGB URL
+--==============================================================
+
+ConfirmButton.Activated:Connect(function()
+
+	local NewURL =
+		URLBox.Text
+
+	NewURL =
+		NewURL:gsub(
+			"^%s+",
+			""
+		)
+
+	NewURL =
+		NewURL:gsub(
+			"%s+$",
+			""
+		)
+
+	if NewURL == "" then
+
+		Status.Text =
+			"RGB URL EMPTY"
+
+		return
+	end
+
+	RGB_URL = NewURL
+
+	-- Invalidate old RGB cache
+	RGBFrames = nil
+
+	URLWindow.Visible = false
+
+	Status.Text =
+		"RGB URL UPDATED"
+end)
+
+--==============================================================
+-- STOP
+--==============================================================
+
+StopButton.Activated:Connect(function()
+
+	CancelRun()
+
+	URLWindow.Visible = false
+
+	Status.Text =
+		"STOPPING..."
+
+	PlayBadAppleButton.Text =
+		"PLAY BAD APPLE"
+
+	PlayRGBButton.Text =
+		"PLAY CUSTOM RGB"
+end)
+
+--==============================================================
+-- SCAN
+--==============================================================
+
+ScanButton.Activated:Connect(function()
+
+	if
+		Building
+		or
+		Playing
+		or
+		Scanning
+	then
+
+		return
+	end
+
+	task.spawn(
+		ScanBlocks
+	)
+end)
+
+--==============================================================
+-- LOG
+--==============================================================
+
+print(
+	"BUILD LOGIC BAD APPLE"
 )
 
 print(
-    "================================"
+	"Grid:",
+	X_SIZE,
+	"x",
+	Y_SIZE
 )
 
 print(
-    "BUILD LOGIC BAD APPLE"
+	"Total:",
+	TOTAL_BLOCKS
 )
 
 print(
-    "Grid :",
-    X_SIZE,
-    "x",
-    Y_SIZE
+	"Build workers:",
+	BUILD_WORKERS
 )
 
 print(
-    "Total:",
-    TOTAL_BLOCKS
+	"Build batch:",
+	BUILD_BATCH
 )
 
 print(
-    "Origin:",
-    PosOriginPart.Position
+	"Paint workers:",
+	PAINT_WORKERS
 )
 
 print(
-    "Grid size:",
-    GRANDEUR_BLOC
+	"Paint batch:",
+	PAINT_BATCH
 )
 
 print(
-    "Vertical flip:",
-    "ENABLED"
+	"Scan radius:",
+	SCAN_RADIUS
 )
 
 print(
-    "Startup:",
-    STARTUP_URL
+	"Startup:",
+	STARTUP_DURATION,
+	"seconds"
 )
 
 print(
-    "Startup duration:",
-    STARTUP_DURATION,
-    "seconds"
-)
-
-print(
-    "================================"
+	"RGB URL:",
+	RGB_URL
 )
