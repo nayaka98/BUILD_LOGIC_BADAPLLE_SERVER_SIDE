@@ -18,7 +18,7 @@ local Y_SIZE=39
 local TOTAL_BLOCKS=X_SIZE*Y_SIZE
 
 local STARTUP_URL="https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/badapple_51x39_AB.txt"
-local STARTUP_DURATION=2.5
+local STARTUP_DURATION=5
 local BAD_APPLE_URL="https://raw.githubusercontent.com/niikkzx/Plane-Crazy/main/badapple"
 local RGB_URL="https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/art_rgb"
 
@@ -30,8 +30,8 @@ local COLOR_ENABLED=false
 local FRAME_DELAY=0.05
 local PAINT_BATCH=64
 local PAINT_WORKERS=32
-local BUILD_WORKERS=256
-local BUILD_BATCH=11000
+local BUILD_WORKERS=512
+local BUILD_BATCH=512
 local BUILD_RESCAN_DELAY=0.15
 local BUILD_RESCAN_ATTEMPTS=12
 local SCAN_RADIUS=1.75
@@ -64,8 +64,8 @@ Gui.Parent=PlayerGui
 
 local Window=Instance.new("Frame")
 Window.Name="Window"
-Window.Size=UDim2.fromOffset(225,280)
-Window.Position=UDim2.new(0,12,0.5,-140)
+Window.Size=UDim2.fromOffset(225,322)
+Window.Position=UDim2.new(0,12,0.5,-161)
 Window.BackgroundColor3=Color3.fromRGB(22,22,28)
 Window.BorderSizePixel=0
 Window.Active=true
@@ -132,9 +132,10 @@ end
 
 local BuildButton=MakeButton("BUILD 51 × 39",73)
 local ColorButton=MakeButton("COLOR : OFF",114)
-local PlayButton=MakeButton("PLAY BAD APPLE",155)
-local StopButton=MakeButton("STOP",196)
-local ScanButton=MakeButton("SCAN BLOCK",237)
+local PlayBadAppleButton=MakeButton("PLAY BAD APPLE",155)
+local PlayRGBButton=MakeButton("PLAY CUSTOM RGB",196)
+local StopButton=MakeButton("STOP",237)
+local ScanButton=MakeButton("SCAN BLOCK",278)
 
 local Dragging=false
 local DragStart
@@ -144,7 +145,6 @@ local DragInput
 Header.InputBegan:Connect(function(Input)
 	if Input.UserInputType==Enum.UserInputType.Touch
 		or Input.UserInputType==Enum.UserInputType.MouseButton1 then
-
 		Dragging=true
 		DragStart=Input.Position
 		WindowStart=Window.Position
@@ -154,7 +154,6 @@ end)
 Header.InputEnded:Connect(function(Input)
 	if Input.UserInputType==Enum.UserInputType.Touch
 		or Input.UserInputType==Enum.UserInputType.MouseButton1 then
-
 		Dragging=false
 	end
 end)
@@ -162,7 +161,6 @@ end)
 Header.InputChanged:Connect(function(Input)
 	if Input.UserInputType==Enum.UserInputType.Touch
 		or Input.UserInputType==Enum.UserInputType.MouseMovement then
-
 		DragInput=Input
 	end
 end)
@@ -228,7 +226,6 @@ local function Position2CodePosition(Position)
 	if X<0 or X>=256
 		or Y<0 or Y>=256
 		or Z<0 or Z>=256 then
-
 		return nil
 	end
 
@@ -519,22 +516,9 @@ local function BuildGrid()
 		TOTAL_BLOCKS
 	)
 
-	print(
-		"BUILD:",
-		Completed,
-		"/",
-		TOTAL_BLOCKS
-	)
-
-	print(
-		"FAILED:",
-		Failed
-	)
-
-	print(
-		"CACHED:",
-		Found
-	)
+	print("BUILD:",Completed,"/",TOTAL_BLOCKS)
+	print("FAILED:",Failed)
+	print("CACHED:",Found)
 end
 
 local function ScanBlocks()
@@ -575,7 +559,7 @@ end
 
 local function LoadText(URL)
 	local OK,Text=pcall(function()
-		return game:HttpGet(URL)
+		return game:HttpGet(URL,true)
 	end)
 
 	if not OK then
@@ -688,7 +672,9 @@ local function ParseRGBFrame(Text)
 			and G>=0 and G<=255
 			and B>=0 and B<=255 then
 
-			Pixels[#Pixels+1]=Color3.fromRGB(
+			Pixels[
+				#Pixels+1
+			]=Color3.fromRGB(
 				R,
 				G,
 				B
@@ -704,10 +690,6 @@ local function ParseRGBFrame(Text)
 end
 
 local function LoadRGB()
-	if not RGB_URL then
-		return true
-	end
-
 	if RGBFrames then
 		return true
 	end
@@ -720,6 +702,8 @@ local function LoadRGB()
 		Status.Text="RGB DOWNLOAD FAILED"
 		return false
 	end
+
+	Text=Text:gsub("%s","")
 
 	local RawFrames=string.split(
 		Text,
@@ -747,17 +731,8 @@ local function LoadRGB()
 	return true
 end
 
-local BLACK=Color3.new(
-	0,
-	0,
-	0
-)
-
-local WHITE=Color3.new(
-	1,
-	1,
-	1
-)
+local BLACK=Color3.new(0,0,0)
+local WHITE=Color3.new(1,1,1)
 
 local function PaintBox(Box,Color)
 	if not Box or not Box.Parent then
@@ -797,6 +772,17 @@ local function GetCharacter(Frame,X,Y)
 	end
 
 	return nil
+end
+
+local function GetRGBColor(Frame,X,Y)
+	local FrameY=Y_SIZE-1-Y
+
+	local Index=
+		FrameY*X_SIZE+
+		X+
+		1
+
+	return Frame[Index]
 end
 
 local function PrepareABFrame(
@@ -907,7 +893,12 @@ local function PrepareRGBFrame(
 			)
 
 			local Data=Blocks[Key]
-			local Color=Frame[Position]
+			local Color=
+				GetRGBColor(
+					Frame,
+					X,
+					Y
+				)
 
 			if Data and Color then
 				local Old=
@@ -1088,22 +1079,16 @@ local function ResetPixelState()
 	table.clear(PreviousPixels)
 end
 
-local function PreparePlayback()
+local function PreparePlayback(RGBMode)
 	if not LoadStartup() then
 		return false
 	end
 
-	if RGB_URL then
-		if not LoadRGB() then
-			return false
-		end
-	else
-		if not LoadBadApple() then
-			return false
-		end
+	if RGBMode then
+		return LoadRGB()
 	end
 
-	return true
+	return LoadBadApple()
 end
 
 local function PlayStartup(Token)
@@ -1171,7 +1156,7 @@ local function PlayStartup(Token)
 	end
 end
 
-local function PlayBadApple()
+local function PlayMode(RGBMode)
 	if Playing then
 		return
 	end
@@ -1200,41 +1185,53 @@ local function PlayBadApple()
 
 	local Token=NewRunToken()
 
-	PlayButton.Text="PREPARING..."
-
 	ResetPixelState()
 
-	if not PreparePlayback() then
+	if RGBMode then
+		PlayRGBButton.Text="PREPARING RGB..."
+		PlayBadAppleButton.Text="PLAY BAD APPLE"
+	else
+		PlayBadAppleButton.Text="PREPARING..."
+		PlayRGBButton.Text="PLAY CUSTOM RGB"
+	end
+
+	if not PreparePlayback(RGBMode) then
 		Playing=false
 		StopRequested=false
-		PlayButton.Text="PLAY BAD APPLE"
+		PlayBadAppleButton.Text="PLAY BAD APPLE"
+		PlayRGBButton.Text="PLAY CUSTOM RGB"
 		return
 	end
 
 	if IsCancelled(Token) then
 		Playing=false
-		PlayButton.Text="PLAY BAD APPLE"
+		PlayBadAppleButton.Text="PLAY BAD APPLE"
+		PlayRGBButton.Text="PLAY CUSTOM RGB"
 		Status.Text="STOPPED"
 		return
 	end
 
-	PlayButton.Text="STARTUP..."
+	if RGBMode then
+		PlayRGBButton.Text="STARTUP..."
+	else
+		PlayBadAppleButton.Text="STARTUP..."
+	end
 
 	if not PlayStartup(Token) then
 		Playing=false
-		PlayButton.Text="PLAY BAD APPLE"
+		PlayBadAppleButton.Text="PLAY BAD APPLE"
+		PlayRGBButton.Text="PLAY CUSTOM RGB"
 		Status.Text="STOPPED"
 		return
 	end
 
 	if IsCancelled(Token) then
 		Playing=false
-		PlayButton.Text="PLAY BAD APPLE"
+		PlayBadAppleButton.Text="PLAY BAD APPLE"
+		PlayRGBButton.Text="PLAY CUSTOM RGB"
 		Status.Text="STOPPED"
 		return
 	end
-
-	local RGBMode=RGB_URL~=nil
 
 	local Frames=
 		RGBMode
@@ -1296,7 +1293,9 @@ local function PlayBadApple()
 		and "STOPPED"
 		or "PLAYBACK FINISHED"
 
-	PlayButton.Text="PLAY BAD APPLE"
+	PlayBadAppleButton.Text="PLAY BAD APPLE"
+	PlayRGBButton.Text="PLAY CUSTOM RGB"
+
 	StopRequested=false
 end
 
@@ -1317,9 +1316,8 @@ ColorButton.Activated:Connect(function()
 		or "COLOR : OFF"
 end)
 
-PlayButton.Activated:Connect(function()
+PlayBadAppleButton.Activated:Connect(function()
 	if Playing then
-		CancelRun()
 		return
 	end
 
@@ -1327,14 +1325,34 @@ PlayButton.Activated:Connect(function()
 		return
 	end
 
-	task.spawn(PlayBadApple)
+	task.spawn(
+		PlayMode,
+		false
+	)
+end)
+
+PlayRGBButton.Activated:Connect(function()
+	if Playing then
+		return
+	end
+
+	if Building or Scanning then
+		return
+	end
+
+	task.spawn(
+		PlayMode,
+		true
+	)
 end)
 
 StopButton.Activated:Connect(function()
 	CancelRun()
 
 	Status.Text="STOPPING..."
-	PlayButton.Text="PLAY BAD APPLE"
+
+	PlayBadAppleButton.Text="PLAY BAD APPLE"
+	PlayRGBButton.Text="PLAY CUSTOM RGB"
 end)
 
 ScanButton.Activated:Connect(function()
@@ -1354,4 +1372,4 @@ print("Paint workers:",PAINT_WORKERS)
 print("Paint batch:",PAINT_BATCH)
 print("Scan radius:",SCAN_RADIUS)
 print("Startup:",STARTUP_DURATION)
-print("RGB URL:",RGB_URL or "DISABLED")
+print("RGB URL:",RGB_URL)
