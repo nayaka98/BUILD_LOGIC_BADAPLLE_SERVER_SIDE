@@ -24,9 +24,10 @@ local X_SIZE=51
 local Y_SIZE=39
 local TOTAL_BLOCKS=X_SIZE*Y_SIZE
 
-local STARTUP_URL="https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/startup1.txt"
+local STARTUP_URL=
+	"https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/startup1.txt"
 
-local STARTUP_DURATION=2.5
+local STARTUP_DURATION=3
 
 local BAD_APPLE_URL=
 	"https://raw.githubusercontent.com/niikkzx/Plane-Crazy/main/badapple"
@@ -205,7 +206,6 @@ Status.Position=
 	)
 
 Status.BackgroundTransparency=1
-
 Status.Text="READY"
 
 Status.TextColor3=
@@ -350,10 +350,8 @@ URLWindow.BackgroundColor3=
 	)
 
 URLWindow.BorderSizePixel=0
-
 URLWindow.Visible=false
 URLWindow.ZIndex=20
-
 URLWindow.Parent=Gui
 
 local URLCorner=
@@ -392,9 +390,7 @@ URLTitle.Position=
 	)
 
 URLTitle.BackgroundTransparency=1
-
-URLTitle.Text=
-	"CUSTOM RGB URL"
+URLTitle.Text="CUSTOM RGB URL"
 
 URLTitle.TextColor3=
 	Color3.new(
@@ -460,7 +456,6 @@ URLBox.PlaceholderColor3=
 
 URLBox.TextSize=10
 URLBox.Font=Enum.Font.Code
-
 URLBox.ClearTextOnFocus=false
 
 URLBox.TextXAlignment=
@@ -505,7 +500,6 @@ ConfirmButton.BackgroundColor3=
 	)
 
 ConfirmButton.BorderSizePixel=0
-
 ConfirmButton.Text="CONFIRM"
 
 ConfirmButton.TextColor3=
@@ -548,11 +542,11 @@ Header.InputBegan:Connect(function(Input)
 	then
 
 		Dragging=true
+
 		DragStart=Input.Position
 		WindowStart=Window.Position
 
 	end
-
 end)
 
 Header.InputEnded:Connect(function(Input)
@@ -568,7 +562,6 @@ Header.InputEnded:Connect(function(Input)
 		Dragging=false
 
 	end
-
 end)
 
 Header.InputChanged:Connect(function(Input)
@@ -584,7 +577,6 @@ Header.InputChanged:Connect(function(Input)
 		DragInput=Input
 
 	end
-
 end)
 
 UserInputService.InputChanged:Connect(function(Input)
@@ -845,10 +837,12 @@ local function CacheBoxesFromWorkspace()
 								y=Y,
 								z=Z,
 								key=Key,
+
 								code=
 									Position2CodePosition(
 										Grid
 									),
+
 								world=Expected,
 								box=Object
 							}
@@ -856,12 +850,17 @@ local function CacheBoxesFromWorkspace()
 						Found+=1
 
 					end
+
 				end
+
 			end
+
 		end
+
 	end
 
 	return Found
+
 end
 
 local function WaitForBuiltBoxes(Token)
@@ -964,6 +963,7 @@ local function PrepareBuildData()
 	end
 
 	return Data
+
 end
 
 local function BuildGrid()
@@ -977,11 +977,11 @@ local function BuildGrid()
 	then
 
 		if Playing then
-			Status.Text=
-				"PLAYBACK ACTIVE"
+			Status.Text="PLAYBACK ACTIVE"
 		end
 
 		return
+
 	end
 
 	Building=true
@@ -1143,17 +1143,13 @@ local function BuildGrid()
 	if not Synced then
 
 		if IsCancelled(Token) then
-
 			Status.Text="STOPPED"
-
 		else
-
 			Status.Text=
 				string.format(
 					"BUILD DONE • %d BOX",
 					Found
 				)
-
 		end
 
 		return
@@ -1197,15 +1193,10 @@ local function ScanBlocks()
 	then
 
 		if Building then
-
-			Status.Text=
-				"BUILDING..."
+			Status.Text="BUILDING..."
 
 		elseif Playing then
-
-			Status.Text=
-				"PLAYBACK ACTIVE"
-
+			Status.Text="PLAYBACK ACTIVE"
 		end
 
 		return
@@ -1230,6 +1221,7 @@ local function ScanBlocks()
 	if IsCancelled(Token) then
 
 		Scanning=false
+
 		Status.Text=
 			"SCAN STOPPED"
 
@@ -1282,146 +1274,6 @@ local function LoadText(URL)
 			"\r",
 			""
 		)
-
-end
-
-local function LoadBadApple()
-
-	if BadAppleFrames then
-		return true
-	end
-
-	Status.Text=
-		"LOADING BAD APPLE..."
-
-	local Text=
-		LoadText(
-			BAD_APPLE_URL
-		)
-
-	if not Text then
-
-		Status.Text=
-			"DOWNLOAD FAILED"
-
-		return false
-
-	end
-
-	Text=
-		Text:gsub(
-			"%s",
-			""
-		)
-
-	local Frames={}
-
-	for _,Frame in
-		ipairs(
-			string.split(
-				Text,
-				"N"
-			)
-		)
-	do
-
-		if
-			#Frame==TOTAL_BLOCKS
-		then
-
-			Frames[
-				#Frames+1
-			]=Frame
-
-		end
-
-	end
-
-	if
-		#Frames==0
-	then
-
-		Status.Text=
-			"BAD APPLE EMPTY"
-
-		return false
-
-	end
-
-	BadAppleFrames=
-		Frames
-
-	return true
-
-end
-
-local function LoadStartup()
-
-	if StartupFrames then
-		return true
-	end
-
-	Status.Text=
-		"LOADING STARTUP..."
-
-	local Text=
-		LoadText(
-			STARTUP_URL
-		)
-
-	if not Text then
-
-		Status.Text=
-			"STARTUP DOWNLOAD FAILED"
-
-		return false
-
-	end
-
-	Text=
-		Text:gsub(
-			"%s",
-			""
-		)
-
-	local Frames={}
-
-	for _,Frame in
-		ipairs(
-			string.split(
-				Text,
-				"N"
-			)
-		)
-	do
-
-		if
-			#Frame==TOTAL_BLOCKS
-		then
-
-			Frames[
-				#Frames+1
-			]=Frame
-
-		end
-
-	end
-
-	if
-		#Frames==0
-	then
-
-		Status.Text=
-			"STARTUP EMPTY"
-
-		return false
-
-	end
-
-	StartupFrames=
-		Frames
-
-	return true
 
 end
 
@@ -1489,39 +1341,35 @@ local function ParseRGBFrame(Text)
 
 end
 
-local function LoadRGB()
-
-	if RGBFrames then
-		return true
-	end
+local function LoadRGBFrames(URL,StatusText,EmptyText)
 
 	if
-		not RGB_URL
+		not URL
 		or
-		RGB_URL==""
+		URL==""
 	then
 
 		Status.Text=
 			"RGB URL EMPTY"
 
-		return false
+		return nil
 
 	end
 
 	Status.Text=
-		"LOADING RGB..."
+		StatusText
 
 	local Text=
 		LoadText(
-			RGB_URL
+			URL
 		)
 
 	if not Text then
 
 		Status.Text=
-			"RGB DOWNLOAD FAILED"
+			"DOWNLOAD FAILED"
 
-		return false
+		return nil
 
 	end
 
@@ -1542,12 +1390,111 @@ local function LoadRGB()
 		)
 	do
 
-		local Frame=
-			ParseRGBFrame(
-				FrameText
-			)
+		if #FrameText>0 then
 
-		if Frame then
+			local Frame=
+				ParseRGBFrame(
+					FrameText
+				)
+
+			if Frame then
+
+				Frames[
+					#Frames+1
+				]=Frame
+
+			end
+
+		end
+
+	end
+
+	if
+		#Frames==0
+	then
+
+		Status.Text=
+			EmptyText
+
+		return nil
+
+	end
+
+	return Frames
+
+end
+
+local function LoadStartup()
+
+	if StartupFrames then
+		return true
+	end
+
+	local Frames=
+		LoadRGBFrames(
+			STARTUP_URL,
+			"LOADING STARTUP RGB...",
+			"STARTUP RGB EMPTY"
+		)
+
+	if not Frames then
+		return false
+	end
+
+	StartupFrames=Frames
+
+	print(
+		"STARTUP RGB FRAMES:",
+		#StartupFrames
+	)
+
+	return true
+
+end
+
+local function LoadBadApple()
+
+	if BadAppleFrames then
+		return true
+	end
+
+	Status.Text=
+		"LOADING BAD APPLE..."
+
+	local Text=
+		LoadText(
+			BAD_APPLE_URL
+		)
+
+	if not Text then
+
+		Status.Text=
+			"DOWNLOAD FAILED"
+
+		return false
+
+	end
+
+	Text=
+		Text:gsub(
+			"%s",
+			""
+		)
+
+	local Frames={}
+
+	for _,Frame in
+		ipairs(
+			string.split(
+				Text,
+				"N"
+			)
+		)
+	do
+
+		if
+			#Frame==TOTAL_BLOCKS
+		then
 
 			Frames[
 				#Frames+1
@@ -1562,14 +1509,36 @@ local function LoadRGB()
 	then
 
 		Status.Text=
-			"RGB EMPTY"
+			"BAD APPLE EMPTY"
 
 		return false
 
 	end
 
-	RGBFrames=
-		Frames
+	BadAppleFrames=Frames
+
+	return true
+
+end
+
+local function LoadRGB()
+
+	if RGBFrames then
+		return true
+	end
+
+	local Frames=
+		LoadRGBFrames(
+			RGB_URL,
+			"LOADING RGB...",
+			"RGB EMPTY"
+		)
+
+	if not Frames then
+		return false
+	end
+
+	RGBFrames=Frames
 
 	return true
 
@@ -1599,9 +1568,7 @@ local function PaintBox(
 		or
 		not Box.Parent
 	then
-
 		return
-
 	end
 
 	pcall(function()
@@ -1860,12 +1827,22 @@ local function PrepareRGBFrame(
 					Old
 				then
 
-					Changed=
-						Old.R~=Color.R
-						or
-						Old.G~=Color.G
-						or
-						Old.B~=Color.B
+					if
+						type(Old)=="table"
+					then
+
+						Changed=
+							Old.R~=Color.R
+							or
+							Old.G~=Color.G
+							or
+							Old.B~=Color.B
+
+					else
+
+						Changed=true
+
+					end
 
 				end
 
@@ -1928,7 +1905,8 @@ local function CommitFrame(
 
 			PreviousPixels[
 				Item.Key
-			]=Item.Value
+			]=
+				Item.Value
 
 		end
 
@@ -1970,9 +1948,7 @@ local function PaintPreparedFrame(
 					if
 						IsCancelled(Token)
 					then
-
 						break
-
 					end
 
 					local EndIndex=
@@ -1990,9 +1966,7 @@ local function PaintPreparedFrame(
 						if
 							IsCancelled(Token)
 						then
-
 							break
-
 						end
 
 						local Item=
@@ -2201,12 +2175,13 @@ local function PlayStartup(
 		local FrameStart=
 			os.clock()
 
+		-- STARTUP SEKARANG RGB
 		local OK=
 			PaintFrame(
 				Frame,
 				FirstFrame,
 				Token,
-				false
+				true
 			)
 
 		FirstFrame=false
@@ -2247,7 +2222,7 @@ local function PlayStartup(
 
 		Status.Text=
 			string.format(
-				"STARTUP %.1f/%.1f",
+				"STARTUP RGB %.1f/%.1f",
 				math.min(
 					Elapsed,
 					STARTUP_DURATION
@@ -2333,11 +2308,7 @@ local function PlayMode(
 
 	end
 
-	if
-		not PreparePlayback(
-			RGBMode
-		)
-	then
+	if not PreparePlayback(RGBMode) then
 
 		Playing=false
 		StopRequested=false
@@ -2352,9 +2323,7 @@ local function PlayMode(
 
 	end
 
-	if
-		IsCancelled(Token)
-	then
+	if IsCancelled(Token) then
 
 		Playing=false
 
@@ -2364,8 +2333,7 @@ local function PlayMode(
 		PlayRGBButton.Text=
 			"PLAY CUSTOM RGB"
 
-		Status.Text=
-			"STOPPED"
+		Status.Text="STOPPED"
 
 		return
 
@@ -2383,11 +2351,8 @@ local function PlayMode(
 
 	end
 
-	if
-		not PlayStartup(
-			Token
-		)
-	then
+	-- STARTUP RGB 3 DETIK
+	if not PlayStartup(Token) then
 
 		Playing=false
 
@@ -2397,16 +2362,13 @@ local function PlayMode(
 		PlayRGBButton.Text=
 			"PLAY CUSTOM RGB"
 
-		Status.Text=
-			"STOPPED"
+		Status.Text="STOPPED"
 
 		return
 
 	end
 
-	if
-		IsCancelled(Token)
-	then
+	if IsCancelled(Token) then
 
 		Playing=false
 
@@ -2416,8 +2378,7 @@ local function PlayMode(
 		PlayRGBButton.Text=
 			"PLAY CUSTOM RGB"
 
-		Status.Text=
-			"STOPPED"
+		Status.Text="STOPPED"
 
 		return
 
@@ -2739,8 +2700,17 @@ print(
 )
 
 print(
-	"Startup:",
+	"Startup duration:",
 	STARTUP_DURATION
+)
+
+print(
+	"Startup mode: RGB"
+)
+
+print(
+	"Startup URL:",
+	STARTUP_URL
 )
 
 print(
