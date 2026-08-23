@@ -24,8 +24,7 @@ local X_SIZE=51
 local Y_SIZE=39
 local TOTAL_BLOCKS=X_SIZE*Y_SIZE
 
-local STARTUP_URL=
-	"https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/startup1.txt"
+local STARTUP_URL="https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/startup1.txt"
 
 local STARTUP_DURATION=2.5
 
