@@ -27,7 +27,7 @@ local TOTAL_BLOCKS=X_SIZE*Y_SIZE
 local STARTUP_URL=
 	"https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/startup1.txt"
 
-local STARTUP_DURATION=3
+local STARTUP_DURATION=5
 
 local BAD_APPLE_URL=
 	"https://raw.githubusercontent.com/niikkzx/Plane-Crazy/main/badapple"
@@ -41,7 +41,7 @@ local START_Z=0
 
 local COLOR_ENABLED=false
 
-local FRAME_DELAY=0.03
+local FRAME_DELAY=0.05
 
 local PAINT_BATCH=64
 local PAINT_WORKERS=32
