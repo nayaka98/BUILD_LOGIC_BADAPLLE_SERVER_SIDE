@@ -93,7 +93,7 @@ local TOTAL_BLOCKS =
 --==============================================================
 
 local STARTUP_URL =
-    "https://raw.githubusercontent.com/USERNAME/REPO/main/startup"
+    "https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/badapple_51x39_AB.txt"
 
 local STARTUP_DURATION = 5
 
