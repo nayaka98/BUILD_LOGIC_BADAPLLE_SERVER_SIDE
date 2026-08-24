@@ -41,7 +41,8 @@ local GRANDEUR_BLOC=3
 
 local X_SIZE=51
 local Y_SIZE=39
-local TOTAL_BLOCKS=X_SIZE*Y_SIZE
+local TOTAL_BLOCKS=
+	X_SIZE*Y_SIZE
 
 local STARTUP_URL=
 	"https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/startup1.txt"
@@ -65,11 +66,13 @@ local FRAME_DELAY=0.05
 local PAINT_BATCH=64
 local PAINT_WORKERS=32
 
-local BUILD_WORKERS=1989
-local BUILD_BATCH=2000
+local BUILD_WORKERS=1024
+local BUILD_BATCH=1028
 
-local DELETE_WORKERS=512
-local DELETE_BATCH=1024
+local DELETE_WORKERS=256
+local DELETE_BATCH=500
+
+local CUSTOM_BRIGHTNESS=0
 
 local BUILD_RESCAN_DELAY=0.15
 local BUILD_RESCAN_ATTEMPTS=12
@@ -387,11 +390,11 @@ local function MakeButton(Text)
 	Button.Text=Text
 
 	Button.TextColor3=
-		Color3.new(
-			1,
-			1,
-			1
-		)
+	Color3.new(
+		1,
+		1,
+		1
+	)
 
 	Button.TextSize=11
 	Button.Font=
@@ -419,6 +422,12 @@ end
 local BlockIDButton=
 	MakeButton(
 		"BLOCK ID : "..BLOCK_ID
+	)
+
+local BrightnessButton=
+	MakeButton(
+		"BRIGHTNESS : +"
+		..CUSTOM_BRIGHTNESS
 	)
 
 local BuildButton=
@@ -668,6 +677,272 @@ IDConfirmCorner.CornerRadius=
 
 IDConfirmCorner.Parent=IDConfirm
 
+local BrightnessWindow=
+	Instance.new("Frame")
+
+BrightnessWindow.Size=
+	UDim2.new(
+		0.90,
+		0,
+		0,
+		190
+	)
+
+BrightnessWindow.Position=
+	UDim2.new(
+		0.5,
+		0,
+		0.5,
+		0
+	)
+
+BrightnessWindow.AnchorPoint=
+	Vector2.new(
+		0.5,
+		0.5
+	)
+
+BrightnessWindow.BackgroundColor3=
+	Color3.fromRGB(
+		20,
+		20,
+		26
+	)
+
+BrightnessWindow.BorderSizePixel=0
+BrightnessWindow.Visible=false
+BrightnessWindow.ZIndex=20
+BrightnessWindow.Parent=Gui
+
+local BrightnessConstraint=
+	Instance.new("UISizeConstraint")
+
+BrightnessConstraint.MinSize=
+	Vector2.new(
+		280,
+		175
+	)
+
+BrightnessConstraint.MaxSize=
+	Vector2.new(
+		500,
+		205
+	)
+
+BrightnessConstraint.Parent=
+	BrightnessWindow
+
+local BrightnessCorner=
+	Instance.new("UICorner")
+
+BrightnessCorner.CornerRadius=
+	UDim.new(
+		0,
+		12
+	)
+
+BrightnessCorner.Parent=
+	BrightnessWindow
+
+local BrightnessTitle=
+	Instance.new("TextLabel")
+
+BrightnessTitle.Size=
+	UDim2.new(
+		1,
+		-20,
+		0,
+		28
+	)
+
+BrightnessTitle.Position=
+	UDim2.fromOffset(
+		10,
+		8
+	)
+
+BrightnessTitle.BackgroundTransparency=1
+BrightnessTitle.Text="ADD CUSTOM BRIGHTNESS"
+
+BrightnessTitle.TextColor3=
+	Color3.new(
+		1,
+		1,
+		1
+	)
+
+BrightnessTitle.TextSize=13
+BrightnessTitle.Font=
+	Enum.Font.GothamBold
+
+BrightnessTitle.TextXAlignment=
+	Enum.TextXAlignment.Left
+
+BrightnessTitle.ZIndex=21
+BrightnessTitle.Parent=
+	BrightnessWindow
+
+local BrightnessExample=
+	Instance.new("TextLabel")
+
+BrightnessExample.Size=
+	UDim2.new(
+		1,
+		-20,
+		0,
+		20
+	)
+
+BrightnessExample.Position=
+	UDim2.fromOffset(
+		10,
+		33
+	)
+
+BrightnessExample.BackgroundTransparency=1
+BrightnessExample.Text="Example : 20 = +20"
+
+BrightnessExample.TextColor3=
+	Color3.fromRGB(
+		175,
+		175,
+		185
+	)
+
+BrightnessExample.TextSize=10
+BrightnessExample.Font=
+	Enum.Font.Code
+
+BrightnessExample.TextXAlignment=
+	Enum.TextXAlignment.Left
+
+BrightnessExample.ZIndex=21
+BrightnessExample.Parent=
+	BrightnessWindow
+
+local BrightnessBox=
+	Instance.new("TextBox")
+
+BrightnessBox.Size=
+	UDim2.new(
+		1,
+		-20,
+		0,
+		38
+	)
+
+BrightnessBox.Position=
+	UDim2.fromOffset(
+		10,
+		58
+	)
+
+BrightnessBox.BackgroundColor3=
+	Color3.fromRGB(
+		40,
+		40,
+		50
+	)
+
+BrightnessBox.BorderSizePixel=0
+BrightnessBox.Text=
+	tostring(
+		CUSTOM_BRIGHTNESS
+	)
+
+BrightnessBox.PlaceholderText=
+	"Enter brightness"
+
+BrightnessBox.TextColor3=
+	Color3.new(
+		1,
+		1,
+		1
+	)
+
+BrightnessBox.PlaceholderColor3=
+	Color3.fromRGB(
+		125,
+		125,
+		135
+	)
+
+BrightnessBox.TextSize=11
+BrightnessBox.Font=
+	Enum.Font.Code
+
+BrightnessBox.ClearTextOnFocus=false
+
+BrightnessBox.ZIndex=21
+BrightnessBox.Parent=
+	BrightnessWindow
+
+local BrightnessBoxCorner=
+	Instance.new("UICorner")
+
+BrightnessBoxCorner.CornerRadius=
+	UDim.new(
+		0,
+		7
+	)
+
+BrightnessBoxCorner.Parent=
+	BrightnessBox
+
+local BrightnessConfirm=
+	Instance.new("TextButton")
+
+BrightnessConfirm.Size=
+	UDim2.fromOffset(
+		125,
+		32
+	)
+
+BrightnessConfirm.Position=
+	UDim2.new(
+		0.5,
+		-62,
+		1,
+		-40
+	)
+
+BrightnessConfirm.BackgroundColor3=
+	Color3.fromRGB(
+		65,
+		65,
+		80
+	)
+
+BrightnessConfirm.BorderSizePixel=0
+BrightnessConfirm.Text="CONFIRM"
+
+BrightnessConfirm.TextColor3=
+	Color3.new(
+		1,
+		1,
+		1
+	)
+
+BrightnessConfirm.TextSize=11
+BrightnessConfirm.Font=
+	Enum.Font.GothamBold
+
+BrightnessConfirm.ZIndex=21
+BrightnessConfirm.Parent=
+	BrightnessWindow
+
+local BrightnessConfirmCorner=
+	Instance.new("UICorner")
+
+BrightnessConfirmCorner.CornerRadius=
+	UDim.new(
+		0,
+		8
+	)
+
+BrightnessConfirmCorner.Parent=
+	BrightnessConfirm
+
 local URLWindow=
 	Instance.new("Frame")
 
@@ -720,7 +995,8 @@ URLConstraint.MaxSize=
 		185
 	)
 
-URLConstraint.Parent=URLWindow
+URLConstraint.Parent=
+	URLWindow
 
 local URLCorner=
 	Instance.new("UICorner")
@@ -731,7 +1007,8 @@ URLCorner.CornerRadius=
 		12
 	)
 
-URLCorner.Parent=URLWindow
+URLCorner.Parent=
+	URLWindow
 
 local URLTitle=
 	Instance.new("TextLabel")
@@ -768,7 +1045,8 @@ URLTitle.TextXAlignment=
 	Enum.TextXAlignment.Left
 
 URLTitle.ZIndex=21
-URLTitle.Parent=URLWindow
+URLTitle.Parent=
+	URLWindow
 
 local URLBox=
 	Instance.new("TextBox")
@@ -810,7 +1088,8 @@ URLBox.Font=
 
 URLBox.ClearTextOnFocus=false
 URLBox.ZIndex=21
-URLBox.Parent=URLWindow
+URLBox.Parent=
+	URLWindow
 
 local URLBoxCorner=
 	Instance.new("UICorner")
@@ -821,7 +1100,8 @@ URLBoxCorner.CornerRadius=
 		7
 	)
 
-URLBoxCorner.Parent=URLBox
+URLBoxCorner.Parent=
+	URLBox
 
 local ConfirmButton=
 	Instance.new("TextButton")
@@ -862,7 +1142,8 @@ ConfirmButton.Font=
 	Enum.Font.GothamBold
 
 ConfirmButton.ZIndex=21
-ConfirmButton.Parent=URLWindow
+ConfirmButton.Parent=
+	URLWindow
 
 local ConfirmCorner=
 	Instance.new("UICorner")
@@ -873,7 +1154,8 @@ ConfirmCorner.CornerRadius=
 		8
 	)
 
-ConfirmCorner.Parent=ConfirmButton
+ConfirmCorner.Parent=
+	ConfirmButton
 
 local Dragging=false
 local DragStart=nil
@@ -884,10 +1166,10 @@ DragButton.InputBegan:Connect(function(Input)
 
 	if
 		Input.UserInputType==
-			Enum.UserInputType.Touch
+		Enum.UserInputType.Touch
 		or
 		Input.UserInputType==
-			Enum.UserInputType.MouseButton1
+		Enum.UserInputType.MouseButton1
 	then
 
 		Dragging=true
@@ -902,10 +1184,10 @@ DragButton.InputEnded:Connect(function(Input)
 
 	if
 		Input.UserInputType==
-			Enum.UserInputType.Touch
+		Enum.UserInputType.Touch
 		or
 		Input.UserInputType==
-			Enum.UserInputType.MouseButton1
+		Enum.UserInputType.MouseButton1
 	then
 
 		Dragging=false
@@ -918,10 +1200,10 @@ DragButton.InputChanged:Connect(function(Input)
 
 	if
 		Input.UserInputType==
-			Enum.UserInputType.Touch
+		Enum.UserInputType.Touch
 		or
 		Input.UserInputType==
-			Enum.UserInputType.MouseMovement
+		Enum.UserInputType.MouseMovement
 	then
 
 		DragInput=Input
@@ -1250,11 +1532,14 @@ local function CacheBoxesFromWorkspace()
 									y=Y,
 									z=Z,
 									key=Key,
+
 									code=
 										Position2CodePosition(
 											Grid
 										),
+
 									world=Expected,
+
 									box=Object,
 									block=Block
 								}
@@ -1277,7 +1562,9 @@ local function CacheBoxesFromWorkspace()
 
 end
 
-local function WaitForBuiltBoxes(Token)
+local function WaitForBuiltBoxes(
+	Token
+)
 
 	local Found=0
 
@@ -1285,12 +1572,8 @@ local function WaitForBuiltBoxes(Token)
 		BUILD_RESCAN_ATTEMPTS
 	do
 
-		if
-			IsCancelled(Token)
-		then
-
+		if IsCancelled(Token) then
 			return false,Found
-
 		end
 
 		Found=
@@ -1404,7 +1687,9 @@ local function BuildGrid()
 	local Token=
 		NewRunToken()
 
-	table.clear(Blocks)
+	table.clear(
+		Blocks
+	)
 
 	Status.Text=
 		"PREPARING BUILD..."
@@ -1443,8 +1728,12 @@ local function BuildGrid()
 					BuildData[Index]
 				)
 
-			if IsCancelled(Token) then
+			if
+				IsCancelled(Token)
+			then
+
 				break
+
 			end
 
 			if Success then
@@ -1652,14 +1941,18 @@ local function DeleteOneBlock(Data)
 
 	end
 
-	if V1==-1 then
+	if
+		V1==-1
+	then
 
 		return false,
 			"SERVER -1"
 
 	end
 
-	if V1==true then
+	if
+		V1==true
+	then
 
 		return true,
 			P
@@ -1733,7 +2026,9 @@ local function DeleteAllBlocks()
 	local Token=
 		NewRunToken()
 
-	table.clear(Blocks)
+	table.clear(
+		Blocks
+	)
 
 	Status.Text=
 		"SCANNING BLOCKS..."
@@ -1750,7 +2045,9 @@ local function DeleteAllBlocks()
 
 	end
 
-	if Found<=0 then
+	if
+		Found<=0
+	then
 
 		Deleting=false
 		Status.Text="NO BLOCK FOUND"
@@ -1786,7 +2083,9 @@ local function DeleteAllBlocks()
 
 	end
 
-	if Count==0 then
+	if
+		Count==0
+	then
 
 		Deleting=false
 		Status.Text=
@@ -1798,21 +2097,15 @@ local function DeleteAllBlocks()
 
 	local Completed=0
 	local Failed=0
-	local NextIndex=0
-
-	Status.Text=
-		string.format(
-			"DELETE 0/%d",
-			Count
-		)
-
 	local BatchStart=1
 
 	while
 		BatchStart<=Count
 	do
 
-		if IsCancelled(Token) then
+		if
+			IsCancelled(Token)
+		then
 
 			Deleting=false
 			Status.Text="STOPPED"
@@ -1834,8 +2127,8 @@ local function DeleteAllBlocks()
 			BatchStart+
 			1
 
-		local WorkersDone=0
 		local BatchNext=0
+		local WorkersDone=0
 
 		local WorkerCount=
 			math.min(
@@ -1847,8 +2140,12 @@ local function DeleteAllBlocks()
 
 			while true do
 
-				if IsCancelled(Token) then
+				if
+					IsCancelled(Token)
+				then
+
 					break
+
 				end
 
 				local LocalIndex=
@@ -1878,8 +2175,12 @@ local function DeleteAllBlocks()
 						Data
 					)
 
-				if IsCancelled(Token) then
+				if
+					IsCancelled(Token)
+				then
+
 					break
+
 				end
 
 				if Success then
@@ -1922,7 +2223,9 @@ local function DeleteAllBlocks()
 			WorkersDone<WorkerCount
 		do
 
-			if IsCancelled(Token) then
+			if
+				IsCancelled(Token)
+			then
 
 				Deleting=false
 				Status.Text="STOPPED"
@@ -2002,7 +2305,9 @@ local function ScanBlocks()
 	local Token=
 		NewRunToken()
 
-	table.clear(Blocks)
+	table.clear(
+		Blocks
+	)
 
 	Status.Text=
 		"SCANNING BLOCKS..."
@@ -2012,7 +2317,9 @@ local function ScanBlocks()
 
 	Scanning=false
 
-	if IsCancelled(Token) then
+	if
+		IsCancelled(Token)
+	then
 
 		Status.Text=
 			"SCAN STOPPED"
@@ -2065,10 +2372,11 @@ local function LoadText(URL)
 			""
 		)
 
-	return Text:gsub(
-		"\r",
-		""
-	)
+	return
+		Text:gsub(
+			"\r",
+			""
+		)
 
 end
 
@@ -2249,11 +2557,6 @@ local function LoadStartup()
 	StartupFrames=
 		Frames
 
-	print(
-		"STARTUP RGB FRAMES:",
-		#StartupFrames
-	)
-
 	return true
 
 end
@@ -2367,6 +2670,76 @@ local WHITE=
 		1
 	)
 
+local function ApplyBrightness(
+	Color
+)
+
+	local R=
+		math.floor(
+			Color.R*255+
+			0.5
+		)
+
+	local G=
+		math.floor(
+			Color.G*255+
+			0.5
+		)
+
+	local B=
+		math.floor(
+			Color.B*255+
+			0.5
+		)
+
+	R=
+		math.min(
+			255,
+			R+
+			CUSTOM_BRIGHTNESS
+		)
+
+	G=
+		math.min(
+			255,
+			G+
+			CUSTOM_BRIGHTNESS
+		)
+
+	B=
+		math.min(
+			255,
+			B+
+			CUSTOM_BRIGHTNESS
+		)
+
+	R=
+		math.max(
+			0,
+			R
+		)
+
+	G=
+		math.max(
+			0,
+			G
+		)
+
+	B=
+		math.max(
+			0,
+			B
+		)
+
+	return
+		Color3.fromRGB(
+			R,
+			G,
+			B
+		)
+
+end
+
 local function PaintBox(
 	Box,
 	Color
@@ -2419,12 +2792,20 @@ local function GetCharacter(
 			Index
 		)
 
-	if Byte==65 then
+	if
+		Byte==65
+	then
+
 		return "A"
+
 	end
 
-	if Byte==66 then
+	if
+		Byte==66
+	then
+
 		return "B"
+
 	end
 
 	return nil
@@ -2512,8 +2893,10 @@ local function PrepareABFrame(
 				local Key=
 					string.format(
 						"%d_%d_%d",
-						X+START_X,
-						Y+START_Y,
+						X+
+						START_X,
+						Y+
+						START_Y,
 						START_Z
 					)
 
@@ -2570,7 +2953,8 @@ end
 
 local function PrepareRGBFrame(
 	Frame,
-	FirstFrame
+	FirstFrame,
+	UseBrightness
 )
 
 	local Workers=
@@ -2615,8 +2999,10 @@ local function PrepareRGBFrame(
 			local Key=
 				string.format(
 					"%d_%d_%d",
-					X+START_X,
-					Y+START_Y,
+					X+
+					START_X,
+					Y+
+					START_Y,
 					START_Z
 				)
 
@@ -2636,6 +3022,19 @@ local function PrepareRGBFrame(
 				Color
 			then
 
+				if
+					UseBrightness
+					and
+					CUSTOM_BRIGHTNESS~=0
+				then
+
+					Color=
+						ApplyBrightness(
+							Color
+						)
+
+				end
+
 				local Old=
 					PreviousPixels[Key]
 
@@ -2652,12 +3051,33 @@ local function PrepareRGBFrame(
 						type(Old)=="table"
 					then
 
+						local R=
+							math.floor(
+								Color.R*
+								255+
+								0.5
+							)
+
+						local G=
+							math.floor(
+								Color.G*
+								255+
+								0.5
+							)
+
+						local B=
+							math.floor(
+								Color.B*
+								255+
+								0.5
+							)
+
 						Changed=
-							Old.R~=Color.R
+							Old.R~=R/255
 							or
-							Old.G~=Color.G
+							Old.G~=G/255
 							or
-							Old.B~=Color.B
+							Old.B~=B/255
 
 					else
 
@@ -2796,7 +3216,9 @@ local function PaintPreparedFrame(
 						end
 
 						local Item=
-							Items[ItemIndex]
+							Items[
+								ItemIndex
+							]
 
 						PaintBox(
 							Item.Box,
@@ -2864,7 +3286,8 @@ local function PaintFrame(
 	Frame,
 	FirstFrame,
 	Token,
-	RGBMode
+	RGBMode,
+	UseBrightness
 )
 
 	local Workers
@@ -2875,7 +3298,8 @@ local function PaintFrame(
 		Workers,Counts=
 			PrepareRGBFrame(
 				Frame,
-				FirstFrame
+				FirstFrame,
+				UseBrightness
 			)
 
 	else
@@ -2991,7 +3415,8 @@ local function PlayStartup(
 		if not Frame then
 
 			FrameIndex=1
-			Frame=StartupFrames[1]
+			Frame=
+				StartupFrames[1]
 
 		end
 
@@ -3003,7 +3428,8 @@ local function PlayStartup(
 				Frame,
 				FirstFrame,
 				Token,
-				true
+				true,
+				false
 			)
 
 		FirstFrame=false
@@ -3094,7 +3520,9 @@ local function PlayMode(
 
 	end
 
-	if not COLOR_ENABLED then
+	if
+		not COLOR_ENABLED
+	then
 
 		Status.Text=
 			"COLOR IS OFF"
@@ -3122,7 +3550,11 @@ local function PlayMode(
 
 	end
 
-	if not PreparePlayback(RGBMode) then
+	if
+		not PreparePlayback(
+			RGBMode
+		)
+	then
 
 		Playing=false
 
@@ -3136,7 +3568,9 @@ local function PlayMode(
 
 	end
 
-	if IsCancelled(Token) then
+	if
+		IsCancelled(Token)
+	then
 
 		Playing=false
 		Status.Text="STOPPED"
@@ -3157,7 +3591,9 @@ local function PlayMode(
 
 	end
 
-	if not PlayStartup(Token) then
+	if
+		not PlayStartup(Token)
+	then
 
 		Playing=false
 
@@ -3173,7 +3609,9 @@ local function PlayMode(
 
 	end
 
-	if IsCancelled(Token) then
+	if
+		IsCancelled(Token)
+	then
 
 		Playing=false
 		Status.Text="STOPPED"
@@ -3218,6 +3656,7 @@ local function PlayMode(
 				Frame,
 				FirstMainFrame,
 				Token,
+				RGBMode,
 				RGBMode
 			)
 
@@ -3290,8 +3729,7 @@ BlockIDButton.Activated:Connect(function()
 	IDBox.Text=
 		BLOCK_ID
 
-	IDWindow.Visible=
-		true
+	IDWindow.Visible=true
 
 	IDBox:CaptureFocus()
 
@@ -3329,11 +3767,98 @@ IDConfirm.Activated:Connect(function()
 	BlockIDButton.Text=
 		"BLOCK ID : "..BLOCK_ID
 
-	IDWindow.Visible=
-		false
+	IDWindow.Visible=false
 
 	Status.Text=
 		"BLOCK ID UPDATED"
+
+end)
+
+BrightnessButton.Activated:Connect(function()
+
+	if
+		Building
+		or
+		Playing
+		or
+		Scanning
+		or
+		Deleting
+	then
+
+		return
+
+	end
+
+	BrightnessBox.Text=
+		tostring(
+			CUSTOM_BRIGHTNESS
+		)
+
+	BrightnessWindow.Visible=
+		true
+
+	BrightnessBox:CaptureFocus()
+
+end)
+
+BrightnessConfirm.Activated:Connect(function()
+
+	local Value=
+		BrightnessBox.Text
+
+	Value=
+		Value:gsub(
+			"%s",
+			""
+		)
+
+	local Number=
+		tonumber(
+			Value
+		)
+
+	if
+		not Number
+	then
+
+		Status.Text=
+			"INVALID BRIGHTNESS"
+
+		return
+
+	end
+
+	Number=
+		math.floor(
+			Number
+		)
+
+	if
+		Number<0
+	then
+
+		Number=0
+
+	end
+
+	CUSTOM_BRIGHTNESS=
+		Number
+
+	BrightnessButton.Text=
+		"BRIGHTNESS : +"
+		..CUSTOM_BRIGHTNESS
+
+	BrightnessWindow.Visible=
+		false
+
+	table.clear(
+		PreviousPixels
+	)
+
+	Status.Text=
+		"BRIGHTNESS : +"
+		..CUSTOM_BRIGHTNESS
 
 end)
 
@@ -3438,8 +3963,7 @@ RGBURLButton.Activated:Connect(function()
 	URLBox.Text=
 		RGB_URL
 
-	URLWindow.Visible=
-		true
+	URLWindow.Visible=true
 
 	URLBox:CaptureFocus()
 
@@ -3478,8 +4002,7 @@ ConfirmButton.Activated:Connect(function()
 
 	RGBFrames=nil
 
-	URLWindow.Visible=
-		false
+	URLWindow.Visible=false
 
 	Status.Text=
 		"RGB URL UPDATED"
@@ -3535,6 +4058,7 @@ StopButton.Activated:Connect(function()
 	CancelRun()
 
 	IDWindow.Visible=false
+	BrightnessWindow.Visible=false
 	URLWindow.Visible=false
 
 	Status.Text=
@@ -3592,6 +4116,11 @@ print(
 print(
 	"Paint batch:",
 	PAINT_BATCH
+)
+
+print(
+	"Brightness:",
+	CUSTOM_BRIGHTNESS
 )
 
 print(
