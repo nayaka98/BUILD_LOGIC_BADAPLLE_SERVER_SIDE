@@ -41,8 +41,7 @@ local GRANDEUR_BLOC=3
 
 local X_SIZE=51
 local Y_SIZE=39
-local TOTAL_BLOCKS=
-	X_SIZE*Y_SIZE
+local TOTAL_BLOCKS=X_SIZE*Y_SIZE
 
 local STARTUP_URL=
 	"https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/startup1.txt"
@@ -66,11 +65,11 @@ local FRAME_DELAY=0.05
 local PAINT_BATCH=64
 local PAINT_WORKERS=32
 
-local BUILD_WORKERS=1024
-local BUILD_BATCH=1028
+local BUILD_WORKERS=1989
+local BUILD_BATCH=2000
 
-local DELETE_WORKERS=256
-local DELETE_BATCH=52000
+local DELETE_WORKERS=512
+local DELETE_BATCH=1024
 
 local BUILD_RESCAN_DELAY=0.15
 local BUILD_RESCAN_ATTEMPTS=12
@@ -104,9 +103,7 @@ end
 local Gui=
 	Instance.new("ScreenGui")
 
-Gui.Name=
-	"BadAppleBuildLogic"
-
+Gui.Name="BadAppleBuildLogic"
 Gui.ResetOnSpawn=false
 Gui.IgnoreGuiInset=true
 Gui.DisplayOrder=999999
@@ -169,8 +166,7 @@ WindowConstraint.MaxSize=
 		560
 	)
 
-WindowConstraint.Parent=
-	Window
+WindowConstraint.Parent=Window
 
 local WindowCorner=
 	Instance.new("UICorner")
@@ -181,8 +177,7 @@ WindowCorner.CornerRadius=
 		12
 	)
 
-WindowCorner.Parent=
-	Window
+WindowCorner.Parent=Window
 
 local Stroke=
 	Instance.new("UIStroke")
@@ -225,9 +220,7 @@ Title.Position=
 	)
 
 Title.BackgroundTransparency=1
-
-Title.Text=
-	"BUILD LOGIC • BAD APPLE"
+Title.Text="BUILD LOGIC • BAD APPLE"
 
 Title.TextColor3=
 	Color3.new(
@@ -278,9 +271,7 @@ Status.Position=
 	)
 
 Status.BackgroundTransparency=1
-
-Status.Text=
-	"READY"
+Status.Text="READY"
 
 Status.TextColor3=
 	Color3.fromRGB(
@@ -290,9 +281,7 @@ Status.TextColor3=
 	)
 
 Status.TextSize=10
-Status.Font=
-	Enum.Font.Code
-
+Status.Font=Enum.Font.Code
 Status.TextXAlignment=
 	Enum.TextXAlignment.Left
 
@@ -304,8 +293,7 @@ Status.Parent=Window
 local Content=
 	Instance.new("ScrollingFrame")
 
-Content.Name=
-	"Content"
+Content.Name="Content"
 
 Content.Size=
 	UDim2.new(
@@ -330,9 +318,6 @@ Content.ScrollBarImageTransparency=0.15
 Content.ScrollingDirection=
 	Enum.ScrollingDirection.Y
 
-Content.CanvasPosition=
-	Vector2.zero
-
 Content.CanvasSize=
 	UDim2.new(
 		0,
@@ -345,38 +330,24 @@ Content.AutomaticCanvasSize=
 	Enum.AutomaticSize.Y
 
 Content.Active=true
-
 Content.Parent=Window
 
 local ContentPadding=
 	Instance.new("UIPadding")
 
 ContentPadding.PaddingLeft=
-	UDim.new(
-		0,
-		3
-	)
+	UDim.new(0,3)
 
 ContentPadding.PaddingRight=
-	UDim.new(
-		0,
-		3
-	)
+	UDim.new(0,3)
 
 ContentPadding.PaddingTop=
-	UDim.new(
-		0,
-		3
-	)
+	UDim.new(0,3)
 
 ContentPadding.PaddingBottom=
-	UDim.new(
-		0,
-		10
-	)
+	UDim.new(0,10)
 
-ContentPadding.Parent=
-	Content
+ContentPadding.Parent=Content
 
 local ContentLayout=
 	Instance.new("UIListLayout")
@@ -390,8 +361,7 @@ ContentLayout.Padding=
 ContentLayout.SortOrder=
 	Enum.SortOrder.LayoutOrder
 
-ContentLayout.Parent=
-	Content
+ContentLayout.Parent=Content
 
 local function MakeButton(Text)
 
@@ -400,11 +370,11 @@ local function MakeButton(Text)
 
 	Button.Size=
 		UDim2.new(
-		1,
-		0,
-		0,
-		36
-	)
+			1,
+			0,
+			0,
+			36
+		)
 
 	Button.BackgroundColor3=
 		Color3.fromRGB(
@@ -429,9 +399,7 @@ local function MakeButton(Text)
 
 	Button.AutoButtonColor=true
 	Button.Active=true
-
-	Button.Parent=
-		Content
+	Button.Parent=Content
 
 	local Corner=
 		Instance.new("UICorner")
@@ -442,8 +410,7 @@ local function MakeButton(Text)
 			8
 		)
 
-	Corner.Parent=
-		Button
+	Corner.Parent=Button
 
 	return Button
 
@@ -494,10 +461,10 @@ local StopButton=
 		"STOP"
 	)
 
-local Modal=
+local IDWindow=
 	Instance.new("Frame")
 
-Modal.Size=
+IDWindow.Size=
 	UDim2.new(
 		0.84,
 		0,
@@ -505,7 +472,7 @@ Modal.Size=
 		155
 	)
 
-Modal.Position=
+IDWindow.Position=
 	UDim2.new(
 		0.5,
 		0,
@@ -513,53 +480,51 @@ Modal.Position=
 		0
 	)
 
-Modal.AnchorPoint=
+IDWindow.AnchorPoint=
 	Vector2.new(
 		0.5,
 		0.5
 	)
 
-Modal.BackgroundColor3=
+IDWindow.BackgroundColor3=
 	Color3.fromRGB(
 		20,
 		20,
 		26
 	)
 
-Modal.BorderSizePixel=0
-Modal.Visible=false
-Modal.ZIndex=20
-Modal.Parent=Gui
+IDWindow.BorderSizePixel=0
+IDWindow.Visible=false
+IDWindow.ZIndex=20
+IDWindow.Parent=Gui
 
-local ModalConstraint=
+local IDConstraint=
 	Instance.new("UISizeConstraint")
 
-ModalConstraint.MinSize=
+IDConstraint.MinSize=
 	Vector2.new(
 		260,
 		145
 	)
 
-ModalConstraint.MaxSize=
+IDConstraint.MaxSize=
 	Vector2.new(
 		500,
 		180
 	)
 
-ModalConstraint.Parent=
-	Modal
+IDConstraint.Parent=IDWindow
 
-local ModalCorner=
+local IDCorner=
 	Instance.new("UICorner")
 
-ModalCorner.CornerRadius=
+IDCorner.CornerRadius=
 	UDim.new(
 		0,
 		12
 	)
 
-ModalCorner.Parent=
-	Modal
+IDCorner.Parent=IDWindow
 
 local IDTitle=
 	Instance.new("TextLabel")
@@ -596,8 +561,7 @@ IDTitle.TextXAlignment=
 	Enum.TextXAlignment.Left
 
 IDTitle.ZIndex=21
-IDTitle.Parent=
-	Modal
+IDTitle.Parent=IDWindow
 
 local IDBox=
 	Instance.new("TextBox")
@@ -634,24 +598,23 @@ IDBox.TextColor3=
 	)
 
 IDBox.TextSize=11
-IDBox.Font=Enum.Font.Code
+IDBox.Font=
+	Enum.Font.Code
 
 IDBox.ClearTextOnFocus=false
 IDBox.ZIndex=21
-IDBox.Parent=
-	Modal
+IDBox.Parent=IDWindow
 
-local IDCorner=
+local IDBoxCorner=
 	Instance.new("UICorner")
 
-IDCorner.CornerRadius=
+IDBoxCorner.CornerRadius=
 	UDim.new(
 		0,
 		7
 	)
 
-IDCorner.Parent=
-	IDBox
+IDBoxCorner.Parent=IDBox
 
 local IDConfirm=
 	Instance.new("TextButton")
@@ -692,8 +655,7 @@ IDConfirm.Font=
 	Enum.Font.GothamBold
 
 IDConfirm.ZIndex=21
-IDConfirm.Parent=
-	Modal
+IDConfirm.Parent=IDWindow
 
 local IDConfirmCorner=
 	Instance.new("UICorner")
@@ -704,13 +666,12 @@ IDConfirmCorner.CornerRadius=
 		8
 	)
 
-IDConfirmCorner.Parent=
-	IDConfirm
+IDConfirmCorner.Parent=IDConfirm
 
-local URLModal=
+local URLWindow=
 	Instance.new("Frame")
 
-URLModal.Size=
+URLWindow.Size=
 	UDim2.new(
 		0.90,
 		0,
@@ -718,7 +679,7 @@ URLModal.Size=
 		165
 	)
 
-URLModal.Position=
+URLWindow.Position=
 	UDim2.new(
 		0.5,
 		0,
@@ -726,23 +687,23 @@ URLModal.Position=
 		0
 	)
 
-URLModal.AnchorPoint=
+URLWindow.AnchorPoint=
 	Vector2.new(
 		0.5,
 		0.5
 	)
 
-URLModal.BackgroundColor3=
+URLWindow.BackgroundColor3=
 	Color3.fromRGB(
 		20,
 		20,
 		26
 	)
 
-URLModal.BorderSizePixel=0
-URLModal.Visible=false
-URLModal.ZIndex=20
-URLModal.Parent=Gui
+URLWindow.BorderSizePixel=0
+URLWindow.Visible=false
+URLWindow.ZIndex=20
+URLWindow.Parent=Gui
 
 local URLConstraint=
 	Instance.new("UISizeConstraint")
@@ -759,8 +720,7 @@ URLConstraint.MaxSize=
 		185
 	)
 
-URLConstraint.Parent=
-	URLModal
+URLConstraint.Parent=URLWindow
 
 local URLCorner=
 	Instance.new("UICorner")
@@ -771,8 +731,7 @@ URLCorner.CornerRadius=
 		12
 	)
 
-URLCorner.Parent=
-	URLModal
+URLCorner.Parent=URLWindow
 
 local URLTitle=
 	Instance.new("TextLabel")
@@ -809,8 +768,7 @@ URLTitle.TextXAlignment=
 	Enum.TextXAlignment.Left
 
 URLTitle.ZIndex=21
-URLTitle.Parent=
-	URLModal
+URLTitle.Parent=URLWindow
 
 local URLBox=
 	Instance.new("TextBox")
@@ -852,8 +810,7 @@ URLBox.Font=
 
 URLBox.ClearTextOnFocus=false
 URLBox.ZIndex=21
-URLBox.Parent=
-	URLModal
+URLBox.Parent=URLWindow
 
 local URLBoxCorner=
 	Instance.new("UICorner")
@@ -864,8 +821,7 @@ URLBoxCorner.CornerRadius=
 		7
 	)
 
-URLBoxCorner.Parent=
-	URLBox
+URLBoxCorner.Parent=URLBox
 
 local ConfirmButton=
 	Instance.new("TextButton")
@@ -906,8 +862,7 @@ ConfirmButton.Font=
 	Enum.Font.GothamBold
 
 ConfirmButton.ZIndex=21
-ConfirmButton.Parent=
-	URLModal
+ConfirmButton.Parent=URLWindow
 
 local ConfirmCorner=
 	Instance.new("UICorner")
@@ -918,13 +873,12 @@ ConfirmCorner.CornerRadius=
 		8
 	)
 
-ConfirmCorner.Parent=
-	ConfirmButton
+ConfirmCorner.Parent=ConfirmButton
 
 local Dragging=false
-local DragStart
-local WindowStart
-local DragInput
+local DragStart=nil
+local WindowStart=nil
+local DragInput=nil
 
 DragButton.InputBegan:Connect(function(Input)
 
@@ -1054,11 +1008,7 @@ local function PosMonde2Grille(
 
 end
 
-local function GridToWorld(
-	X,
-	Y,
-	Z
-)
+local function GridToWorld(X,Y,Z)
 
 	return
 		OriginPosition+
@@ -1096,11 +1046,17 @@ local function Position2CodePosition(
 		)
 
 	if
-		X<0 or X>=256
+		X<0
 		or
-		Y<0 or Y>=256
+		X>=256
 		or
-		Z<0 or Z>=256
+		Y<0
+		or
+		Y>=256
+		or
+		Z<0
+		or
+		Z>=256
 	then
 
 		return nil
@@ -1146,9 +1102,7 @@ local function CancelRun()
 
 end
 
-local function IsCancelled(
-	Token
-)
+local function IsCancelled(Token)
 
 	return
 		StopRequested
@@ -1157,9 +1111,7 @@ local function IsCancelled(
 
 end
 
-local function PlaceBlock(
-	Data
-)
+local function PlaceBlock(Data)
 
 	local OK,Result=
 		pcall(function()
@@ -1214,7 +1166,7 @@ local function GetObjFromBox(
 		Current=Parent
 
 		if not Current then
-			break
+			return nil
 		end
 
 	end
@@ -1325,9 +1277,7 @@ local function CacheBoxesFromWorkspace()
 
 end
 
-local function WaitForBuiltBoxes(
-	Token
-)
+local function WaitForBuiltBoxes(Token)
 
 	local Found=0
 
@@ -1335,8 +1285,12 @@ local function WaitForBuiltBoxes(
 		BUILD_RESCAN_ATTEMPTS
 	do
 
-		if IsCancelled(Token) then
+		if
+			IsCancelled(Token)
+		then
+
 			return false,Found
+
 		end
 
 		Found=
@@ -1398,6 +1352,7 @@ local function PrepareBuildData()
 					x=X,
 					y=Y,
 					z=START_Z,
+
 					key=
 						string.format(
 							"%d_%d_%d",
@@ -1405,10 +1360,12 @@ local function PrepareBuildData()
 							Y,
 							START_Z
 						),
+
 					code=
 						Position2CodePosition(
 							Grid
 						),
+
 					world=
 						GridToWorld(
 							X,
@@ -1486,12 +1443,8 @@ local function BuildGrid()
 					BuildData[Index]
 				)
 
-			if
-				IsCancelled(Token)
-			then
-
+			if IsCancelled(Token) then
 				break
-
 			end
 
 			if Success then
@@ -1599,23 +1552,47 @@ local function BuildGrid()
 			TOTAL_BLOCKS
 		)
 
+	print(
+		"BUILD:",
+		Completed,
+		"/",
+		TOTAL_BLOCKS
+	)
+
+	print(
+		"FAILED:",
+		Failed
+	)
+
+	print(
+		"CACHED:",
+		Found
+	)
+
 end
 
-local function DeleteOneBlock(
-	Data
-)
-
-	local Block=
-		Data and Data.block
+local function DeleteOneBlock(Data)
 
 	if
-		not Block
+		not Data
 		or
-		not Block.Parent
+		not Data.block
 	then
 
 		return false,
 			"BLOCK NIL"
+
+	end
+
+	local Block=
+		Data.block
+
+	if
+		not Block.Parent
+	then
+
+		return true,
+			"ALREADY REMOVED"
 
 	end
 
@@ -1635,29 +1612,27 @@ local function DeleteOneBlock(
 	Block.Parent=
 		FauxBlocsDetruits
 
-	local A
-	local B
-	local C
-	local D
+	local V1=nil
+	local V2=nil
+	local V3=nil
+	local V4=nil
 
-	local OK,Error=
+	local OK,Err=
 		pcall(function()
 
-		A,B,C,D=
-			DeleteBloc:InvokeServer(
-				nil,
-				nil,
-				nil,
-				Block
-			)
+			V1,V2,V3,V4=
+				DeleteBloc:InvokeServer(
+					nil,
+					nil,
+					nil,
+					Block
+				)
 
-	end)
+		end)
 
 	if not OK then
 
 		if
-			Block
-			and
 			Block.Parent==
 				FauxBlocsDetruits
 		then
@@ -1673,39 +1648,36 @@ local function DeleteOneBlock(
 		end
 
 		return false,
-			tostring(Error)
+			tostring(Err)
 
 	end
 
-	if A==-1 then
+	if V1==-1 then
 
 		return false,
 			"SERVER -1"
 
 	end
 
-	if A==true then
+	if V1==true then
 
 		return true,
 			P
 
 	end
 
-	local Restore=
-		D
-
 	if
-		Restore
+		V4
 		and
-		typeof(Restore)=="Instance"
+		typeof(V4)=="Instance"
 	then
 
 		pcall(function()
 
-			Restore.Parent=
+			V4.Parent=
 				Blocs
 
-			Restore:SetAttribute(
+			V4:SetAttribute(
 				"t",
 				nil
 			)
@@ -1731,9 +1703,9 @@ local function DeleteOneBlock(
 
 	return false,
 		tostring(
-			B
+			V2
 			or
-			C
+			V3
 			or
 			"DELETE FAILED"
 		)
@@ -1769,9 +1741,7 @@ local function DeleteAllBlocks()
 	local Found=
 		CacheBoxesFromWorkspace()
 
-	if
-		IsCancelled(Token)
-	then
+	if IsCancelled(Token) then
 
 		Deleting=false
 		Status.Text="STOPPED"
@@ -1783,7 +1753,7 @@ local function DeleteAllBlocks()
 	if Found<=0 then
 
 		Deleting=false
-		Status.Text="NO BLOCKS FOUND"
+		Status.Text="NO BLOCK FOUND"
 
 		return
 
@@ -1819,22 +1789,16 @@ local function DeleteAllBlocks()
 	if Count==0 then
 
 		Deleting=false
-		Status.Text="NO VALID BLOCKS"
+		Status.Text=
+			"NO VALID BLOCK FOUND"
 
 		return
 
 	end
 
-	local NextIndex=0
 	local Completed=0
 	local Failed=0
-	local WorkersDone=0
-
-	local WorkerCount=
-		math.min(
-			DELETE_WORKERS,
-			Count
-		)
+	local NextIndex=0
 
 	Status.Text=
 		string.format(
@@ -1842,93 +1806,10 @@ local function DeleteAllBlocks()
 			Count
 		)
 
-	local function Worker()
-
-		while true do
-
-			if IsCancelled(Token) then
-				break
-			end
-
-			local Index=
-				NextIndex+1
-
-			NextIndex=Index
-
-			if Index>Count then
-				break
-			end
-
-			local Data=
-				List[Index]
-
-			local Success,Error=
-				DeleteOneBlock(
-					Data
-				)
-
-			if IsCancelled(Token) then
-				break
-			end
-
-			if Success then
-
-				Completed+=1
-
-				Blocks[
-					Data.key
-				]=nil
-
-			else
-
-				Failed+=1
-
-				warn(
-					"[DELETE]",
-					Data.key,
-					Error
-				)
-
-			end
-
-			local Finished=
-				Completed+
-				Failed
-
-			if
-				Finished%DELETE_BATCH==0
-			then
-
-				Status.Text=
-					string.format(
-						"DELETE %d/%d • FAIL %d",
-						Completed,
-						Count,
-						Failed
-					)
-
-				task.wait()
-
-			end
-
-		end
-
-		WorkersDone+=1
-
-	end
-
-	for _=1,
-		WorkerCount
-	do
-
-		task.spawn(
-			Worker
-		)
-
-	end
+	local BatchStart=1
 
 	while
-		WorkersDone<WorkerCount
+		BatchStart<=Count
 	do
 
 		if IsCancelled(Token) then
@@ -1940,19 +1821,133 @@ local function DeleteAllBlocks()
 
 		end
 
-		Status.Text=
-			string.format(
-				"DELETE %d/%d • FAIL %d",
-				Completed,
-				Count,
-				Failed
+		local BatchEnd=
+			math.min(
+				BatchStart+
+				DELETE_BATCH-
+				1,
+				Count
 			)
 
-		task.wait()
+		local BatchCount=
+			BatchEnd-
+			BatchStart+
+			1
+
+		local WorkersDone=0
+		local BatchNext=0
+
+		local WorkerCount=
+			math.min(
+				DELETE_WORKERS,
+				BatchCount
+			)
+
+		local function Worker()
+
+			while true do
+
+				if IsCancelled(Token) then
+					break
+				end
+
+				local LocalIndex=
+					BatchNext+1
+
+				BatchNext=
+					LocalIndex
+
+				if
+					LocalIndex>BatchCount
+				then
+
+					break
+
+				end
+
+				local GlobalIndex=
+					BatchStart+
+					LocalIndex-
+					1
+
+				local Data=
+					List[GlobalIndex]
+
+				local Success,Error=
+					DeleteOneBlock(
+						Data
+					)
+
+				if IsCancelled(Token) then
+					break
+				end
+
+				if Success then
+
+					Completed+=1
+
+					Blocks[
+						Data.key
+					]=nil
+
+				else
+
+					Failed+=1
+
+					warn(
+						"[DELETE]",
+						Data.key,
+						Error
+					)
+
+				end
+
+			end
+
+			WorkersDone+=1
+
+		end
+
+		for _=1,
+			WorkerCount
+		do
+
+			task.spawn(
+				Worker
+			)
+
+		end
+
+		while
+			WorkersDone<WorkerCount
+		do
+
+			if IsCancelled(Token) then
+
+				Deleting=false
+				Status.Text="STOPPED"
+
+				return
+
+			end
+
+			Status.Text=
+				string.format(
+					"DELETE %d/%d • FAIL %d",
+					Completed,
+					Count,
+					Failed
+				)
+
+			task.wait()
+
+		end
+
+		BatchStart=
+			BatchEnd+
+			1
 
 	end
-
-	Deleting=false
 
 	table.clear(
 		Blocks
@@ -1962,6 +1957,8 @@ local function DeleteAllBlocks()
 		PreviousPixels
 	)
 
+	Deleting=false
+
 	Status.Text=
 		string.format(
 			"DELETED %d/%d • FAILED %d",
@@ -1969,6 +1966,18 @@ local function DeleteAllBlocks()
 			Count,
 			Failed
 		)
+
+	print(
+		"DELETE:",
+		Completed,
+		"/",
+		Count
+	)
+
+	print(
+		"DELETE FAILED:",
+		Failed
+	)
 
 end
 
@@ -2018,6 +2027,13 @@ local function ScanBlocks()
 			Found,
 			TOTAL_BLOCKS
 		)
+
+	print(
+		"SCAN:",
+		Found,
+		"/",
+		TOTAL_BLOCKS
+	)
 
 end
 
@@ -2078,11 +2094,17 @@ local function ParseRGBFrame(Text)
 		if
 			R and G and B
 			and
-			R>=0 and R<=255
+			R>=0
 			and
-			G>=0 and G<=255
+			R<=255
 			and
-			B>=0 and B<=255
+			G>=0
+			and
+			G<=255
+			and
+			B>=0
+			and
+			B<=255
 		then
 
 			Count+=1
@@ -2141,7 +2163,9 @@ local function LoadRGBFrames(
 		StatusText
 
 	local Text=
-		LoadText(URL)
+		LoadText(
+			URL
+		)
 
 	if not Text then
 
@@ -2169,7 +2193,9 @@ local function LoadRGBFrames(
 		)
 	do
 
-		if #FrameText>0 then
+		if
+			#FrameText>0
+		then
 
 			local Frame=
 				ParseRGBFrame(
@@ -2177,7 +2203,11 @@ local function LoadRGBFrames(
 				)
 
 			if Frame then
-				Frames[#Frames+1]=Frame
+
+				Frames[
+					#Frames+1
+				]=Frame
+
 			end
 
 		end
@@ -2216,7 +2246,13 @@ local function LoadStartup()
 		return false
 	end
 
-	StartupFrames=Frames
+	StartupFrames=
+		Frames
+
+	print(
+		"STARTUP RGB FRAMES:",
+		#StartupFrames
+	)
 
 	return true
 
@@ -2267,8 +2303,9 @@ local function LoadBadApple()
 			TOTAL_BLOCKS
 		then
 
-			Frames[#Frames+1]=
-				Frame
+			Frames[
+				#Frames+1
+			]=Frame
 
 		end
 
@@ -2285,7 +2322,8 @@ local function LoadBadApple()
 
 	end
 
-	BadAppleFrames=Frames
+	BadAppleFrames=
+		Frames
 
 	return true
 
@@ -2308,7 +2346,8 @@ local function LoadRGB()
 		return false
 	end
 
-	RGBFrames=Frames
+	RGBFrames=
+		Frames
 
 	return true
 
@@ -2364,10 +2403,13 @@ local function GetCharacter(
 )
 
 	local FrameY=
-		Y_SIZE-1-Y
+		Y_SIZE-
+		1-
+		Y
 
 	local Index=
-		FrameY*X_SIZE+
+		FrameY*
+		X_SIZE+
 		X+
 		1
 
@@ -2396,10 +2438,13 @@ local function GetRGBColor(
 )
 
 	local FrameY=
-		Y_SIZE-1-Y
+		Y_SIZE-
+		1-
+		Y
 
 	local Index=
-		FrameY*X_SIZE+
+		FrameY*
+		X_SIZE+
 		X+
 		1
 
@@ -2445,9 +2490,11 @@ local function PrepareABFrame(
 
 			local Worker=
 				(
-					(Position-1)%
-					PAINT_WORKERS
-				)+1
+					Position-
+					1
+				)%
+				PAINT_WORKERS+
+				1
 
 			local Character=
 				GetCharacter(
@@ -2515,7 +2562,9 @@ local function PrepareABFrame(
 
 	end
 
-	return Workers,Counts
+	return
+		Workers,
+		Counts
 
 end
 
@@ -2557,9 +2606,11 @@ local function PrepareRGBFrame(
 
 			local Worker=
 				(
-					(Position-1)%
-					PAINT_WORKERS
-				)+1
+					Position-
+					1
+				)%
+				PAINT_WORKERS+
+				1
 
 			local Key=
 				string.format(
@@ -2646,7 +2697,9 @@ local function PrepareRGBFrame(
 
 	end
 
-	return Workers,Counts
+	return
+		Workers,
+		Counts
 
 end
 
@@ -2737,7 +2790,9 @@ local function PaintPreparedFrame(
 						if
 							IsCancelled(Token)
 						then
+
 							break
+
 						end
 
 						local Item=
@@ -2751,7 +2806,8 @@ local function PaintPreparedFrame(
 					end
 
 					Index=
-						EndIndex+1
+						EndIndex+
+						1
 
 					if
 						Index<=Count
@@ -3083,9 +3139,7 @@ local function PlayMode(
 	if IsCancelled(Token) then
 
 		Playing=false
-
-		Status.Text=
-			"STOPPED"
+		Status.Text="STOPPED"
 
 		return
 
@@ -3113,8 +3167,7 @@ local function PlayMode(
 		PlayRGBButton.Text=
 			"PLAY CUSTOM RGB"
 
-		Status.Text=
-			"STOPPED"
+		Status.Text="STOPPED"
 
 		return
 
@@ -3123,9 +3176,7 @@ local function PlayMode(
 	if IsCancelled(Token) then
 
 		Playing=false
-
-		Status.Text=
-			"STOPPED"
+		Status.Text="STOPPED"
 
 		return
 
@@ -3239,7 +3290,8 @@ BlockIDButton.Activated:Connect(function()
 	IDBox.Text=
 		BLOCK_ID
 
-	Modal.Visible=true
+	IDWindow.Visible=
+		true
 
 	IDBox:CaptureFocus()
 
@@ -3277,7 +3329,8 @@ IDConfirm.Activated:Connect(function()
 	BlockIDButton.Text=
 		"BLOCK ID : "..BLOCK_ID
 
-	Modal.Visible=false
+	IDWindow.Visible=
+		false
 
 	Status.Text=
 		"BLOCK ID UPDATED"
@@ -3385,7 +3438,8 @@ RGBURLButton.Activated:Connect(function()
 	URLBox.Text=
 		RGB_URL
 
-	URLModal.Visible=true
+	URLWindow.Visible=
+		true
 
 	URLBox:CaptureFocus()
 
@@ -3424,7 +3478,8 @@ ConfirmButton.Activated:Connect(function()
 
 	RGBFrames=nil
 
-	URLModal.Visible=false
+	URLWindow.Visible=
+		false
 
 	Status.Text=
 		"RGB URL UPDATED"
@@ -3479,8 +3534,8 @@ StopButton.Activated:Connect(function()
 
 	CancelRun()
 
-	Modal.Visible=false
-	URLModal.Visible=false
+	IDWindow.Visible=false
+	URLWindow.Visible=false
 
 	Status.Text=
 		"STOPPING..."
@@ -3515,6 +3570,11 @@ print(
 )
 
 print(
+	"Build batch:",
+	BUILD_BATCH
+)
+
+print(
 	"Delete workers:",
 	DELETE_WORKERS
 )
@@ -3530,6 +3590,16 @@ print(
 )
 
 print(
+	"Paint batch:",
+	PAINT_BATCH
+)
+
+print(
+	"Scan radius:",
+	SCAN_RADIUS
+)
+
+print(
 	"Startup duration:",
 	STARTUP_DURATION
 )
@@ -3541,4 +3611,14 @@ print(
 print(
 	"Block ID:",
 	BLOCK_ID
+)
+
+print(
+	"Startup URL:",
+	STARTUP_URL
+)
+
+print(
+	"RGB URL:",
+	RGB_URL
 )
