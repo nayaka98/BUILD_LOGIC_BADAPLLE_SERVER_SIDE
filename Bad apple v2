@@ -10,9 +10,6 @@ local PlacerBloc=Events:WaitForChild("PlacerBloc")
 local DeleteBloc=Events:WaitForChild("DeleteBloc")
 local Colorie=Events:WaitForChild("RemoteEventColorie")
 
-local RelierFolder=Events:WaitForChild("Relier")
-local RelierEvent=RelierFolder:WaitForChild("Relier")
-
 local BitBuffer=require(
 	ReplicatedStorage.Modules:WaitForChild("BitBuffer")
 )
@@ -73,24 +70,17 @@ local BUILD_WORKERS=1024
 local BUILD_BATCH=1028
 
 local DELETE_WORKERS=256
-local DELETE_BATCH=256
+local DELETE_BATCH=52000
 
 local BUILD_RESCAN_DELAY=0.15
 local BUILD_RESCAN_ATTEMPTS=12
 
 local SCAN_RADIUS=1.75
 
--- AUTO WIRE
-local AUTO_WIRE_ENABLED=true
-local AUTO_WIRE_ID="33"
-local AUTO_WIRE_DELAY=0.03
-local AUTO_WIRE_BATCH=160
-
 local Building=false
 local Playing=false
 local Scanning=false
 local Deleting=false
-local AutoWiring=false
 local StopRequested=false
 
 local RunToken=0
@@ -101,8 +91,6 @@ local RGBFrames=nil
 
 local Blocks={}
 local PreviousPixels={}
-
-local ConnectedPairs={}
 
 local oldGui=
 	PlayerGui:FindFirstChild(
@@ -201,8 +189,7 @@ local Stroke=
 
 Stroke.Thickness=1
 Stroke.Transparency=0.35
-Stroke.Parent=
-	Window
+Stroke.Parent=Window
 
 local Header=
 	Instance.new("Frame")
@@ -291,7 +278,9 @@ Status.Position=
 	)
 
 Status.BackgroundTransparency=1
-Status.Text="READY"
+
+Status.Text=
+	"READY"
 
 Status.TextColor3=
 	Color3.fromRGB(
@@ -315,7 +304,8 @@ Status.Parent=Window
 local Content=
 	Instance.new("ScrollingFrame")
 
-Content.Name="Content"
+Content.Name=
+	"Content"
 
 Content.Size=
 	UDim2.new(
@@ -333,6 +323,7 @@ Content.Position=
 
 Content.BackgroundTransparency=1
 Content.BorderSizePixel=0
+
 Content.ScrollBarThickness=5
 Content.ScrollBarImageTransparency=0.15
 
@@ -354,6 +345,7 @@ Content.AutomaticCanvasSize=
 	Enum.AutomaticSize.Y
 
 Content.Active=true
+
 Content.Parent=Window
 
 local ContentPadding=
@@ -408,11 +400,11 @@ local function MakeButton(Text)
 
 	Button.Size=
 		UDim2.new(
-			1,
-			0,
-			0,
-			36
-		)
+		1,
+		0,
+		0,
+		36
+	)
 
 	Button.BackgroundColor3=
 		Color3.fromRGB(
@@ -437,7 +429,9 @@ local function MakeButton(Text)
 
 	Button.AutoButtonColor=true
 	Button.Active=true
-	Button.Parent=Content
+
+	Button.Parent=
+		Content
 
 	local Corner=
 		Instance.new("UICorner")
@@ -448,7 +442,8 @@ local function MakeButton(Text)
 			8
 		)
 
-	Corner.Parent=Button
+	Corner.Parent=
+		Button
 
 	return Button
 
@@ -601,7 +596,8 @@ IDTitle.TextXAlignment=
 	Enum.TextXAlignment.Left
 
 IDTitle.ZIndex=21
-IDTitle.Parent=Modal
+IDTitle.Parent=
+	Modal
 
 local IDBox=
 	Instance.new("TextBox")
@@ -638,12 +634,12 @@ IDBox.TextColor3=
 	)
 
 IDBox.TextSize=11
-IDBox.Font=
-	Enum.Font.Code
+IDBox.Font=Enum.Font.Code
 
 IDBox.ClearTextOnFocus=false
 IDBox.ZIndex=21
-IDBox.Parent=Modal
+IDBox.Parent=
+	Modal
 
 local IDCorner=
 	Instance.new("UICorner")
@@ -654,7 +650,8 @@ IDCorner.CornerRadius=
 		7
 	)
 
-IDCorner.Parent=IDBox
+IDCorner.Parent=
+	IDBox
 
 local IDConfirm=
 	Instance.new("TextButton")
@@ -695,7 +692,8 @@ IDConfirm.Font=
 	Enum.Font.GothamBold
 
 IDConfirm.ZIndex=21
-IDConfirm.Parent=Modal
+IDConfirm.Parent=
+	Modal
 
 local IDConfirmCorner=
 	Instance.new("UICorner")
@@ -706,7 +704,8 @@ IDConfirmCorner.CornerRadius=
 		8
 	)
 
-IDConfirmCorner.Parent=IDConfirm
+IDConfirmCorner.Parent=
+	IDConfirm
 
 local URLModal=
 	Instance.new("Frame")
@@ -760,7 +759,8 @@ URLConstraint.MaxSize=
 		185
 	)
 
-URLConstraint.Parent=URLModal
+URLConstraint.Parent=
+	URLModal
 
 local URLCorner=
 	Instance.new("UICorner")
@@ -771,7 +771,8 @@ URLCorner.CornerRadius=
 		12
 	)
 
-URLCorner.Parent=URLModal
+URLCorner.Parent=
+	URLModal
 
 local URLTitle=
 	Instance.new("TextLabel")
@@ -808,7 +809,8 @@ URLTitle.TextXAlignment=
 	Enum.TextXAlignment.Left
 
 URLTitle.ZIndex=21
-URLTitle.Parent=URLModal
+URLTitle.Parent=
+	URLModal
 
 local URLBox=
 	Instance.new("TextBox")
@@ -850,7 +852,8 @@ URLBox.Font=
 
 URLBox.ClearTextOnFocus=false
 URLBox.ZIndex=21
-URLBox.Parent=URLModal
+URLBox.Parent=
+	URLModal
 
 local URLBoxCorner=
 	Instance.new("UICorner")
@@ -861,7 +864,8 @@ URLBoxCorner.CornerRadius=
 		7
 	)
 
-URLBoxCorner.Parent=URLBox
+URLBoxCorner.Parent=
+	URLBox
 
 local ConfirmButton=
 	Instance.new("TextButton")
@@ -902,7 +906,8 @@ ConfirmButton.Font=
 	Enum.Font.GothamBold
 
 ConfirmButton.ZIndex=21
-ConfirmButton.Parent=URLModal
+ConfirmButton.Parent=
+	URLModal
 
 local ConfirmCorner=
 	Instance.new("UICorner")
@@ -913,7 +918,8 @@ ConfirmCorner.CornerRadius=
 		8
 	)
 
-ConfirmCorner.Parent=ConfirmButton
+ConfirmCorner.Parent=
+	ConfirmButton
 
 local Dragging=false
 local DragStart
@@ -1009,7 +1015,9 @@ end
 local OriginPosition=
 	PosOriginPart.Position
 
-local function PosMonde2Grille(WorldPosition)
+local function PosMonde2Grille(
+	WorldPosition
+)
 
 	local X=
 		MathRound(
@@ -1046,7 +1054,11 @@ local function PosMonde2Grille(WorldPosition)
 
 end
 
-local function GridToWorld(X,Y,Z)
+local function GridToWorld(
+	X,
+	Y,
+	Z
+)
 
 	return
 		OriginPosition+
@@ -1058,7 +1070,9 @@ local function GridToWorld(X,Y,Z)
 
 end
 
-local function Position2CodePosition(Position)
+local function Position2CodePosition(
+	Position
+)
 
 	local X=
 		math.floor(
@@ -1111,7 +1125,8 @@ local function Position2CodePosition(Position)
 		Z
 	)
 
-	return Buffer:ToBase64()
+	return
+		Buffer:ToBase64()
 
 end
 
@@ -1131,7 +1146,9 @@ local function CancelRun()
 
 end
 
-local function IsCancelled(Token)
+local function IsCancelled(
+	Token
+)
 
 	return
 		StopRequested
@@ -1140,7 +1157,9 @@ local function IsCancelled(Token)
 
 end
 
-local function PlaceBlock(Data)
+local function PlaceBlock(
+	Data
+)
 
 	local OK,Result=
 		pcall(function()
@@ -1168,19 +1187,18 @@ local function PlaceBlock(Data)
 
 end
 
-local function GetObjFromBox(Box)
+local function GetObjFromBox(
+	Box
+)
 
 	if not Box then
 		return nil
 	end
 
-	local Current=Box
+	local Current=
+		Box
 
-	for _=1,6 do
-
-		if not Current then
-			break
-		end
+	for _=1,4 do
 
 		local Parent=
 			Current.Parent
@@ -1194,6 +1212,10 @@ local function GetObjFromBox(Box)
 		end
 
 		Current=Parent
+
+		if not Current then
+			break
+		end
 
 	end
 
@@ -1268,22 +1290,26 @@ local function CacheBoxesFromWorkspace()
 								Object
 							)
 
-						Blocks[Key]=
-							{
-								x=X,
-								y=Y,
-								z=Z,
-								key=Key,
-								code=
-									Position2CodePosition(
-										Grid
-									),
-								world=Expected,
-								box=Object,
-								block=Block
-							}
+						if Block then
 
-						Found+=1
+							Blocks[Key]=
+								{
+									x=X,
+									y=Y,
+									z=Z,
+									key=Key,
+									code=
+										Position2CodePosition(
+											Grid
+										),
+									world=Expected,
+									box=Object,
+									block=Block
+								}
+
+							Found+=1
+
+						end
 
 					end
 
@@ -1299,7 +1325,9 @@ local function CacheBoxesFromWorkspace()
 
 end
 
-local function WaitForBuiltBoxes(Token)
+local function WaitForBuiltBoxes(
+	Token
+)
 
 	local Found=0
 
@@ -1335,9 +1363,7 @@ local function WaitForBuiltBoxes(Token)
 
 	end
 
-	return
-		Found>0,
-		Found
+	return Found>0,Found
 
 end
 
@@ -1372,7 +1398,6 @@ local function PrepareBuildData()
 					x=X,
 					y=Y,
 					z=START_Z,
-
 					key=
 						string.format(
 							"%d_%d_%d",
@@ -1380,12 +1405,10 @@ local function PrepareBuildData()
 							Y,
 							START_Z
 						),
-
 					code=
 						Position2CodePosition(
 							Grid
 						),
-
 					world=
 						GridToWorld(
 							X,
@@ -1402,710 +1425,6 @@ local function PrepareBuildData()
 
 end
 
-local function FindIDAncestor(Object,ID)
-
-	local Wanted=
-		tostring(ID)
-
-	local Current=Object
-
-	for _=1,8 do
-
-		if not Current then
-			break
-		end
-
-		local Value=
-			Current:GetAttribute(
-				"ID"
-			)
-
-		if
-			Value~=nil
-			and
-			tostring(Value)==Wanted
-		then
-
-			return Current
-
-		end
-
-		Current=Current.Parent
-
-	end
-
-	return nil
-
-end
-
-local function GetConnectorType(Object)
-
-	if not Object then
-		return nil
-	end
-
-	if
-		Object:GetAttribute("Input")~=nil
-	then
-
-		return "Input"
-
-	end
-
-	if
-		Object:GetAttribute("Output")~=nil
-	then
-
-		return "Output"
-
-	end
-
-	return nil
-
-end
-
-local function CollectID33Blocks()
-
-	local Result={}
-	local Seen={}
-
-	for _,Object in
-		ipairs(
-			Blocs:GetDescendants()
-		)
-	do
-
-		local ID=
-			Object:GetAttribute("ID")
-
-		if
-			ID~=nil
-			and
-			tostring(ID)==AUTO_WIRE_ID
-			and
-			not Seen[Object]
-		then
-
-			Seen[Object]=true
-
-			Result[#Result+1]=
-				Object
-
-		end
-
-	end
-
-	return Result
-
-end
-
-local function CollectBlockConnectors(Block)
-
-	local Inputs={}
-	local Outputs={}
-
-	if not Block then
-		return Inputs,Outputs
-	end
-
-	for _,Object in
-		ipairs(
-			Block:GetDescendants()
-		)
-	do
-
-		if Object:IsA("BasePart") then
-
-			local Type=
-				GetConnectorType(
-					Object
-				)
-
-			if Type=="Input" then
-
-				Inputs[#Inputs+1]=
-					Object
-
-			elseif Type=="Output" then
-
-				Outputs[#Outputs+1]=
-					Object
-
-			end
-
-		end
-
-	end
-
-	table.sort(
-		Inputs,
-		function(A,B)
-
-			return
-				A:GetFullName()<
-				B:GetFullName()
-
-		end
-	)
-
-	table.sort(
-		Outputs,
-		function(A,B)
-
-			return
-				A:GetFullName()<
-				B:GetFullName()
-
-		end
-	)
-
-	return Inputs,Outputs
-
-end
-
-local function GetBlockCenter(Block)
-
-	if not Block then
-		return Vector3.zero
-	end
-
-	if
-		Block:IsA("BasePart")
-	then
-
-		return Block.Position
-
-	end
-
-	local Primary=
-		Block.PrimaryPart
-
-	if Primary then
-		return Primary.Position
-	end
-
-	local Box=
-		Block:FindFirstChild(
-			"Box",
-			true
-		)
-
-	if
-		Box
-		and
-		Box:IsA("BasePart")
-	then
-
-		return Box.Position
-
-	end
-
-	local OK,Pivot=
-		pcall(function()
-
-			return Block:GetPivot()
-
-		end)
-
-	if OK and Pivot then
-		return Pivot.Position
-	end
-
-	return Vector3.zero
-
-end
-
-local function GetPairKey(A,B)
-
-	if
-		not A
-		or
-		not B
-	then
-
-		return ""
-
-	end
-
-	local AID=
-		A:GetDebugId()
-
-	local BID=
-		B:GetDebugId()
-
-	return
-		AID..
-		":"..
-		BID
-
-end
-
-local function WireAlreadySent(Output,Input)
-
-	local Key=
-		GetPairKey(
-			Output,
-			Input
-		)
-
-	if
-		ConnectedPairs[Key]
-	then
-
-		return true
-
-	end
-
-	local Reverse=
-		GetPairKey(
-			Input,
-			Output
-		)
-
-	return
-		ConnectedPairs[Reverse]~=nil
-
-end
-
-local function SendWire(Output,Input)
-
-	if
-		not Output
-		or
-		not Input
-	then
-
-		return false
-
-	end
-
-	if
-		Output==Input
-	then
-
-		return false
-
-	end
-
-	if
-		Output.Parent==nil
-		or
-		Input.Parent==nil
-	then
-
-		return false
-
-	end
-
-	if
-		GetConnectorType(Output)
-			~="Output"
-	then
-
-		return false
-
-	end
-
-	if
-		GetConnectorType(Input)
-			~="Input"
-	then
-
-		return false
-
-	end
-
-	if
-		WireAlreadySent(
-			Output,
-			Input
-		)
-	then
-
-		return true
-
-	end
-
-	local OK=
-		pcall(function()
-
-			RelierEvent:FireServer(
-				Output,
-				Input
-			)
-
-		end)
-
-	if not OK then
-		return false
-	end
-
-	ConnectedPairs[
-		GetPairKey(
-			Output,
-			Input
-		)
-	]=true
-
-	return true
-
-end
-
-local function SortConnectorsByPosition(List)
-
-	table.sort(
-		List,
-		function(A,B)
-
-			local PA=
-				A.Position
-
-			local PB=
-				B.Position
-
-			if
-				math.abs(PA.X-PB.X)>0.001
-			then
-
-				return PA.X<PB.X
-
-			end
-
-			if
-				math.abs(PA.Y-PB.Y)>0.001
-			then
-
-				return PA.Y<PB.Y
-
-			end
-
-			if
-				math.abs(PA.Z-PB.Z)>0.001
-			then
-
-				return PA.Z<PB.Z
-
-			end
-
-			return
-				A:GetFullName()<
-				B:GetFullName()
-
-		end
-	)
-
-end
-
-local function AutoConnectID33(Token)
-
-	if not AUTO_WIRE_ENABLED then
-		return true
-	end
-
-	if IsCancelled(Token) then
-		return false
-	end
-
-	AutoWiring=true
-
-	table.clear(
-		ConnectedPairs
-	)
-
-	Status.Text=
-		"SEARCH ID "..AUTO_WIRE_ID
-
-	task.wait()
-
-	local Blocks33=
-		CollectID33Blocks()
-
-	if
-		IsCancelled(Token)
-	then
-
-		AutoWiring=false
-		return false
-
-	end
-
-	if #Blocks33==0 then
-
-		AutoWiring=false
-
-		Status.Text=
-			"NO ID "..AUTO_WIRE_ID
-
-		return true
-
-	end
-
-	local Inputs={}
-	local Outputs={}
-
-	for Index,Block in
-		ipairs(
-			Blocks33
-		)
-	do
-
-		if IsCancelled(Token) then
-
-			AutoWiring=false
-			return false
-
-		end
-
-		local BlockInputs,
-			BlockOutputs=
-			CollectBlockConnectors(
-				Block
-			)
-
-		for _,Input in
-			ipairs(
-				BlockInputs
-			)
-		do
-
-			Inputs[#Inputs+1]=
-				{
-					connector=Input,
-					block=Block,
-					position=
-						GetBlockCenter(
-							Block
-						)
-				}
-
-		end
-
-		for _,Output in
-			ipairs(
-				BlockOutputs
-			)
-		do
-
-			Outputs[#Outputs+1]=
-				{
-					connector=Output,
-					block=Block,
-					position=
-						GetBlockCenter(
-							Block
-						)
-				}
-
-		end
-
-		Status.Text=
-			string.format(
-				"ID %s • %d/%d",
-				AUTO_WIRE_ID,
-				Index,
-				#Blocks33
-			)
-
-	end
-
-	if
-		#Inputs==0
-		or
-		#Outputs==0
-	then
-
-		AutoWiring=false
-
-		Status.Text=
-			string.format(
-				"ID %s • NO CONNECTOR",
-				AUTO_WIRE_ID
-			)
-
-		return true
-
-	end
-
-	SortConnectorsByPosition(
-		Inputs
-	)
-
-	SortConnectorsByPosition(
-		Outputs
-	)
-
-	local UsedInputs={}
-	local Pairs={}
-
-	for OutputIndex,OutputData in
-		ipairs(
-			Outputs
-		)
-	do
-
-		if IsCancelled(Token) then
-
-			AutoWiring=false
-			return false
-
-		end
-
-		local BestIndex=nil
-		local BestDistance=math.huge
-
-		for InputIndex,InputData in
-			ipairs(
-				Inputs
-			)
-		do
-
-			if
-				not UsedInputs[InputIndex]
-			then
-
-				local Distance=
-					(
-						OutputData.connector.Position-
-						InputData.connector.Position
-					).Magnitude
-
-				if
-					Distance<BestDistance
-				then
-
-					BestDistance=
-						Distance
-
-					BestIndex=
-						InputIndex
-
-				end
-
-			end
-
-		end
-
-		if BestIndex then
-
-			UsedInputs[BestIndex]=true
-
-			Pairs[#Pairs+1]=
-				{
-					output=
-						OutputData.connector,
-
-					input=
-						Inputs[
-							BestIndex
-						].connector
-				}
-
-		end
-
-	end
-
-	local Total=#Pairs
-	local Connected=0
-	local Failed=0
-
-	Status.Text=
-		string.format(
-			"AUTO WIRE 0/%d",
-			Total
-		)
-
-	for Index,Pair in
-		ipairs(Pairs)
-	do
-
-		if IsCancelled(Token) then
-
-			AutoWiring=false
-			return false
-
-		end
-
-		local Success=
-			SendWire(
-				Pair.output,
-				Pair.input
-			)
-
-		if Success then
-
-			Connected+=1
-
-		else
-
-			Failed+=1
-
-		end
-
-		if
-			Index%AUTO_WIRE_BATCH==0
-			or
-			Index==Total
-		then
-
-			Status.Text=
-				string.format(
-					"AUTO WIRE %d/%d • FAIL %d",
-					Connected,
-					Total,
-					Failed
-				)
-
-			task.wait(
-				AUTO_WIRE_DELAY
-			)
-
-		end
-
-	end
-
-	AutoWiring=false
-
-	Status.Text=
-		string.format(
-			"AUTO WIRE DONE • %d/%d",
-			Connected,
-			Total
-		)
-
-	print(
-		"AUTO WIRE ID:",
-		AUTO_WIRE_ID
-	)
-
-	print(
-		"AUTO WIRE BLOCKS:",
-		#Blocks33
-	)
-
-	print(
-		"AUTO WIRE INPUTS:",
-		#Inputs
-	)
-
-	print(
-		"AUTO WIRE OUTPUTS:",
-		#Outputs
-	)
-
-	print(
-		"AUTO WIRE CONNECTED:",
-		Connected
-	)
-
-	print(
-		"AUTO WIRE FAILED:",
-		Failed
-	)
-
-	return true
-
-end
-
 local function BuildGrid()
 
 	if
@@ -2116,8 +1435,6 @@ local function BuildGrid()
 		Scanning
 		or
 		Deleting
-		or
-		AutoWiring
 	then
 
 		Status.Text="BUSY"
@@ -2178,13 +1495,9 @@ local function BuildGrid()
 			end
 
 			if Success then
-
 				Completed+=1
-
 			else
-
 				Failed+=1
-
 			end
 
 			if
@@ -2219,8 +1532,7 @@ local function BuildGrid()
 	end
 
 	while
-		WorkersDone<
-		BUILD_WORKERS
+		WorkersDone<BUILD_WORKERS
 	do
 
 		if IsCancelled(Token) then
@@ -2266,19 +1578,15 @@ local function BuildGrid()
 			Token
 		)
 
+	Building=false
+
 	if not Synced then
 
-		Building=false
-
-		if IsCancelled(Token) then
-			Status.Text="STOPPED"
-		else
-			Status.Text=
-				string.format(
-					"BUILD DONE • %d BOX",
-					Found
-				)
-		end
+		Status.Text=
+			string.format(
+				"BUILD DONE • %d BOX",
+				Found
+			)
 
 		return
 
@@ -2291,63 +1599,11 @@ local function BuildGrid()
 			TOTAL_BLOCKS
 		)
 
-	Building=false
-
-	if AUTO_WIRE_ENABLED then
-
-		local OK=
-			AutoConnectID33(
-				Token
-			)
-
-		if
-			not OK
-			or
-			IsCancelled(Token)
-		then
-
-			Status.Text=
-				"STOPPED"
-
-			return
-
-		end
-
-	end
-
-	if
-		not IsCancelled(Token)
-	then
-
-		Status.Text=
-			string.format(
-				"READY • %d/%d BLOCKS",
-				Found,
-				TOTAL_BLOCKS
-			)
-
-	end
-
-	print(
-		"BUILD:",
-		Completed,
-		"/",
-		TOTAL_BLOCKS
-	)
-
-	print(
-		"FAILED:",
-		Failed
-	)
-
-	print(
-		"CACHED:",
-		Found
-	)
-
 end
 
-local function DeleteOneBlock(Data)
+local function DeleteOneBlock(
+	Data
+)
 
 	local Block=
 		Data and Data.block
@@ -2387,15 +1643,15 @@ local function DeleteOneBlock(Data)
 	local OK,Error=
 		pcall(function()
 
-			A,B,C,D=
-				DeleteBloc:InvokeServer(
-					nil,
-					nil,
-					nil,
-					Block
-				)
+		A,B,C,D=
+			DeleteBloc:InvokeServer(
+				nil,
+				nil,
+				nil,
+				Block
+			)
 
-		end)
+	end)
 
 	if not OK then
 
@@ -2430,11 +1686,13 @@ local function DeleteOneBlock(Data)
 
 	if A==true then
 
-		return true,P
+		return true,
+			P
 
 	end
 
-	local Restore=D
+	local Restore=
+		D
 
 	if
 		Restore
@@ -2492,8 +1750,6 @@ local function DeleteAllBlocks()
 		Playing
 		or
 		Scanning
-		or
-		AutoWiring
 	then
 
 		return
@@ -2513,7 +1769,9 @@ local function DeleteAllBlocks()
 	local Found=
 		CacheBoxesFromWorkspace()
 
-	if IsCancelled(Token) then
+	if
+		IsCancelled(Token)
+	then
 
 		Deleting=false
 		Status.Text="STOPPED"
@@ -2597,25 +1855,20 @@ local function DeleteAllBlocks()
 
 			NextIndex=Index
 
-			if
-				Index>Count
-			then
-
+			if Index>Count then
 				break
-
 			end
+
+			local Data=
+				List[Index]
 
 			local Success,Error=
 				DeleteOneBlock(
-					List[Index]
+					Data
 				)
 
-			if
-				IsCancelled(Token)
-			then
-
+			if IsCancelled(Token) then
 				break
-
 			end
 
 			if Success then
@@ -2623,7 +1876,7 @@ local function DeleteAllBlocks()
 				Completed+=1
 
 				Blocks[
-					List[Index].key
+					Data.key
 				]=nil
 
 			else
@@ -2632,7 +1885,7 @@ local function DeleteAllBlocks()
 
 				warn(
 					"[DELETE]",
-					List[Index].key,
+					Data.key,
 					Error
 				)
 
@@ -2675,8 +1928,7 @@ local function DeleteAllBlocks()
 	end
 
 	while
-		WorkersDone<
-		WorkerCount
+		WorkersDone<WorkerCount
 	do
 
 		if IsCancelled(Token) then
@@ -2730,8 +1982,6 @@ local function ScanBlocks()
 		Playing
 		or
 		Deleting
-		or
-		AutoWiring
 	then
 
 		return
@@ -2751,16 +2001,16 @@ local function ScanBlocks()
 	local Found=
 		CacheBoxesFromWorkspace()
 
+	Scanning=false
+
 	if IsCancelled(Token) then
 
-		Scanning=false
-		Status.Text="SCAN STOPPED"
+		Status.Text=
+			"SCAN STOPPED"
 
 		return
 
 	end
-
-	Scanning=false
 
 	Status.Text=
 		string.format(
@@ -2768,18 +2018,6 @@ local function ScanBlocks()
 			Found,
 			TOTAL_BLOCKS
 		)
-
-	if AUTO_WIRE_ENABLED then
-
-		task.spawn(function()
-
-			AutoConnectID33(
-				Token
-			)
-
-		end)
-
-	end
 
 end
 
@@ -2811,11 +2049,10 @@ local function LoadText(URL)
 			""
 		)
 
-	return
-		Text:gsub(
-			"\r",
-			""
-		)
+	return Text:gsub(
+		"\r",
+		""
+	)
 
 end
 
@@ -2940,11 +2177,7 @@ local function LoadRGBFrames(
 				)
 
 			if Frame then
-
-				Frames[
-					#Frames+1
-				]=Frame
-
+				Frames[#Frames+1]=Frame
 			end
 
 		end
@@ -3034,9 +2267,8 @@ local function LoadBadApple()
 			TOTAL_BLOCKS
 		then
 
-			Frames[
-				#Frames+1
-			]=Frame
+			Frames[#Frames+1]=
+				Frame
 
 		end
 
@@ -3389,7 +2621,8 @@ local function PrepareRGBFrame(
 					local Count=
 						Counts[Worker]+1
 
-					Counts[Worker]=Count
+					Counts[Worker]=
+						Count
 
 					Workers[Worker][Count]=
 						{
@@ -3504,9 +2737,7 @@ local function PaintPreparedFrame(
 						if
 							IsCancelled(Token)
 						then
-
 							break
-
 						end
 
 						local Item=
@@ -3676,7 +2907,9 @@ local function PreparePlayback(
 
 end
 
-local function PlayStartup(Token)
+local function PlayStartup(
+	Token
+)
 
 	local StartTime=
 		os.clock()
@@ -3788,8 +3021,6 @@ local function PlayMode(
 		Scanning
 		or
 		Deleting
-		or
-		AutoWiring
 	then
 
 		return
@@ -3852,7 +3083,9 @@ local function PlayMode(
 	if IsCancelled(Token) then
 
 		Playing=false
-		Status.Text="STOPPED"
+
+		Status.Text=
+			"STOPPED"
 
 		return
 
@@ -3880,7 +3113,8 @@ local function PlayMode(
 		PlayRGBButton.Text=
 			"PLAY CUSTOM RGB"
 
-		Status.Text="STOPPED"
+		Status.Text=
+			"STOPPED"
 
 		return
 
@@ -3889,7 +3123,9 @@ local function PlayMode(
 	if IsCancelled(Token) then
 
 		Playing=false
-		Status.Text="STOPPED"
+
+		Status.Text=
+			"STOPPED"
 
 		return
 
@@ -3994,8 +3230,6 @@ BlockIDButton.Activated:Connect(function()
 		Scanning
 		or
 		Deleting
-		or
-		AutoWiring
 	then
 
 		return
@@ -4006,6 +3240,7 @@ BlockIDButton.Activated:Connect(function()
 		BLOCK_ID
 
 	Modal.Visible=true
+
 	IDBox:CaptureFocus()
 
 end)
@@ -4059,8 +3294,6 @@ BuildButton.Activated:Connect(function()
 		Scanning
 		or
 		Deleting
-		or
-		AutoWiring
 	then
 
 		return
@@ -4097,8 +3330,6 @@ PlayBadAppleButton.Activated:Connect(function()
 		Scanning
 		or
 		Deleting
-		or
-		AutoWiring
 	then
 
 		return
@@ -4122,8 +3353,6 @@ PlayRGBButton.Activated:Connect(function()
 		Scanning
 		or
 		Deleting
-		or
-		AutoWiring
 	then
 
 		return
@@ -4147,8 +3376,6 @@ RGBURLButton.Activated:Connect(function()
 		Scanning
 		or
 		Deleting
-		or
-		AutoWiring
 	then
 
 		return
@@ -4159,6 +3386,7 @@ RGBURLButton.Activated:Connect(function()
 		RGB_URL
 
 	URLModal.Visible=true
+
 	URLBox:CaptureFocus()
 
 end)
@@ -4213,8 +3441,6 @@ ScanButton.Activated:Connect(function()
 		Scanning
 		or
 		Deleting
-		or
-		AutoWiring
 	then
 
 		return
@@ -4237,8 +3463,6 @@ DeleteButton.Activated:Connect(function()
 		Scanning
 		or
 		Deleting
-		or
-		AutoWiring
 	then
 
 		return
@@ -4296,6 +3520,11 @@ print(
 )
 
 print(
+	"Delete batch:",
+	DELETE_BATCH
+)
+
+print(
 	"Paint workers:",
 	PAINT_WORKERS
 )
@@ -4312,19 +3541,4 @@ print(
 print(
 	"Block ID:",
 	BLOCK_ID
-)
-
-print(
-	"Auto wire:",
-	AUTO_WIRE_ENABLED
-)
-
-print(
-	"Auto wire ID:",
-	AUTO_WIRE_ID
-)
-
-print(
-	"Auto wire delay:",
-	AUTO_WIRE_DELAY
 )
