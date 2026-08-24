@@ -55,6 +55,8 @@ local BAD_APPLE_URL=
 local RGB_URL=
 	"https://raw.githubusercontent.com/nayaka98/BUILD_LOGIC_BADAPLLE_SERVER_SIDE/refs/heads/main/art_rgb"
 
+local CUSTOM_BA_URL=""
+
 local START_X=0
 local START_Y=0
 local START_Z=0
@@ -90,6 +92,7 @@ local RunToken=0
 local BadAppleFrames=nil
 local StartupFrames=nil
 local RGBFrames=nil
+local CustomBAFrames=nil
 
 local Blocks={}
 local PreviousPixels={}
@@ -450,9 +453,19 @@ local PlayRGBButton=
 		"PLAY CUSTOM RGB"
 	)
 
+local PlayCustomBAButton=
+	MakeButton(
+		"PLAY CUSTOM BA"
+	)
+
 local RGBURLButton=
 	MakeButton(
 		"CUSTOM RGB URL"
+	)
+
+local BAURLButton=
+	MakeButton(
+		"CUSTOM BA URL"
 	)
 
 local ScanButton=
@@ -1156,6 +1169,220 @@ ConfirmCorner.CornerRadius=
 
 ConfirmCorner.Parent=
 	ConfirmButton
+
+local BAURLWindow=
+	Instance.new("Frame")
+
+BAURLWindow.Size=
+	UDim2.new(
+		0.90,
+		0,
+		0,
+		165
+	)
+
+BAURLWindow.Position=
+	UDim2.new(
+		0.5,
+		0,
+		0.5,
+		0
+	)
+
+BAURLWindow.AnchorPoint=
+	Vector2.new(
+		0.5,
+		0.5
+	)
+
+BAURLWindow.BackgroundColor3=
+	Color3.fromRGB(
+		20,
+		20,
+		26
+	)
+
+BAURLWindow.BorderSizePixel=0
+BAURLWindow.Visible=false
+BAURLWindow.ZIndex=20
+BAURLWindow.Parent=Gui
+
+local BAURLConstraint=
+	Instance.new("UISizeConstraint")
+
+BAURLConstraint.MinSize=
+	Vector2.new(
+		280,
+		150
+	)
+
+BAURLConstraint.MaxSize=
+	Vector2.new(
+		500,
+		185
+	)
+
+BAURLConstraint.Parent=
+	BAURLWindow
+
+local BAURLCorner=
+	Instance.new("UICorner")
+
+BAURLCorner.CornerRadius=
+	UDim.new(
+		0,
+		12
+	)
+
+BAURLCorner.Parent=
+	BAURLWindow
+
+local BAURLTitle=
+	Instance.new("TextLabel")
+
+BAURLTitle.Size=
+	UDim2.new(
+		1,
+		-20,
+		0,
+		28
+	)
+
+BAURLTitle.Position=
+	UDim2.fromOffset(
+		10,
+		8
+	)
+
+BAURLTitle.BackgroundTransparency=1
+BAURLTitle.Text="CUSTOM BA URL"
+
+BAURLTitle.TextColor3=
+	Color3.new(
+		1,
+		1,
+		1
+	)
+
+BAURLTitle.TextSize=13
+BAURLTitle.Font=
+	Enum.Font.GothamBold
+
+BAURLTitle.TextXAlignment=
+	Enum.TextXAlignment.Left
+
+BAURLTitle.ZIndex=21
+BAURLTitle.Parent=
+	BAURLWindow
+
+local BAURLBox=
+	Instance.new("TextBox")
+
+BAURLBox.Size=
+	UDim2.new(
+		1,
+		-20,
+		0,
+		38
+	)
+
+BAURLBox.Position=
+	UDim2.fromOffset(
+		10,
+		43
+	)
+
+BAURLBox.BackgroundColor3=
+	Color3.fromRGB(
+		40,
+		40,
+		50
+	)
+
+BAURLBox.BorderSizePixel=0
+BAURLBox.Text=CUSTOM_BA_URL
+
+BAURLBox.TextColor3=
+	Color3.new(
+		1,
+		1,
+		1
+	)
+
+BAURLBox.TextSize=10
+BAURLBox.Font=
+	Enum.Font.Code
+
+BAURLBox.ClearTextOnFocus=false
+BAURLBox.ZIndex=21
+BAURLBox.Parent=
+	BAURLWindow
+
+local BAURLBoxCorner=
+	Instance.new("UICorner")
+
+BAURLBoxCorner.CornerRadius=
+	UDim.new(
+		0,
+		7
+	)
+
+BAURLBoxCorner.Parent=
+	BAURLBox
+
+local BAConfirmButton=
+	Instance.new("TextButton")
+
+BAConfirmButton.Size=
+	UDim2.fromOffset(
+		125,
+		32
+	)
+
+BAConfirmButton.Position=
+	UDim2.new(
+		0.5,
+		-62,
+		1,
+		-40
+	)
+
+BAConfirmButton.BackgroundColor3=
+	Color3.fromRGB(
+		65,
+		65,
+		80
+	)
+
+BAConfirmButton.BorderSizePixel=0
+BAConfirmButton.Text="CONFIRM"
+
+BAConfirmButton.TextColor3=
+	Color3.new(
+		1,
+		1,
+		1
+	)
+
+BAConfirmButton.TextSize=11
+BAConfirmButton.Font=
+	Enum.Font.GothamBold
+
+BAConfirmButton.ZIndex=21
+BAConfirmButton.Parent=
+	BAURLWindow
+
+local BAConfirmCorner=
+	Instance.new("UICorner")
+
+BAConfirmCorner.CornerRadius=
+	UDim.new(
+		0,
+		8
+	)
+
+BAConfirmCorner.Parent=
+	BAConfirmButton
 
 local Dragging=false
 local DragStart=nil
@@ -2632,6 +2859,90 @@ local function LoadBadApple()
 
 end
 
+local function LoadCustomBA()
+
+	if CustomBAFrames then
+		return true
+	end
+
+	if
+		not CUSTOM_BA_URL
+		or
+		CUSTOM_BA_URL==""
+	then
+
+		Status.Text=
+			"CUSTOM BA URL EMPTY"
+
+		return false
+
+	end
+
+	Status.Text=
+		"LOADING CUSTOM BA..."
+
+	local Text=
+		LoadText(
+			CUSTOM_BA_URL
+		)
+
+	if not Text then
+
+		Status.Text=
+			"DOWNLOAD FAILED"
+
+		return false
+
+	end
+
+	Text=
+		Text:gsub(
+			"%s",
+			""
+		)
+
+	local Frames={}
+
+	for _,Frame in
+		ipairs(
+			string.split(
+				Text,
+				"N"
+			)
+		)
+	do
+
+		if
+			#Frame==
+			TOTAL_BLOCKS
+		then
+
+			Frames[
+				#Frames+1
+			]=Frame
+
+		end
+
+	end
+
+	if
+		#Frames==0
+	then
+
+		Status.Text=
+			"CUSTOM BA EMPTY"
+
+		return false
+
+	end
+
+	CustomBAFrames=
+		Frames
+
+	return true
+
+end
+
 local function LoadRGB()
 
 	if RGBFrames then
@@ -3366,7 +3677,7 @@ local function ResetPixelState()
 end
 
 local function PreparePlayback(
-	RGBMode
+	Mode
 )
 
 	if
@@ -3377,9 +3688,13 @@ local function PreparePlayback(
 
 	end
 
-	if RGBMode then
+	if Mode==true then
 
 		return LoadRGB()
+
+	elseif Mode=="customba" then
+
+		return LoadCustomBA()
 
 	end
 
@@ -3492,7 +3807,7 @@ local function PlayStartup(
 end
 
 local function PlayMode(
-	RGBMode
+	Mode
 )
 
 	if
@@ -3538,10 +3853,15 @@ local function PlayMode(
 
 	ResetPixelState()
 
-	if RGBMode then
+	if Mode==true then
 
 		PlayRGBButton.Text=
 			"PREPARING RGB..."
+
+	elseif Mode=="customba" then
+
+		PlayCustomBAButton.Text=
+			"PREPARING..."
 
 	else
 
@@ -3552,7 +3872,7 @@ local function PlayMode(
 
 	if
 		not PreparePlayback(
-			RGBMode
+			Mode
 		)
 	then
 
@@ -3563,6 +3883,9 @@ local function PlayMode(
 
 		PlayRGBButton.Text=
 			"PLAY CUSTOM RGB"
+
+		PlayCustomBAButton.Text=
+			"PLAY CUSTOM BA"
 
 		return
 
@@ -3579,9 +3902,14 @@ local function PlayMode(
 
 	end
 
-	if RGBMode then
+	if Mode==true then
 
 		PlayRGBButton.Text=
+			"STARTUP..."
+
+	elseif Mode=="customba" then
+
+		PlayCustomBAButton.Text=
 			"STARTUP..."
 
 	else
@@ -3603,6 +3931,9 @@ local function PlayMode(
 		PlayRGBButton.Text=
 			"PLAY CUSTOM RGB"
 
+		PlayCustomBAButton.Text=
+			"PLAY CUSTOM BA"
+
 		Status.Text="STOPPED"
 
 		return
@@ -3620,19 +3951,29 @@ local function PlayMode(
 
 	end
 
-	local Frames=
-		RGBMode
-		and
-		RGBFrames
-		or
-		BadAppleFrames
+	local Frames
+	local Label
+	local RGBMode
 
-	local Label=
-		RGBMode
-		and
-		"RGB"
-		or
-		"BAD APPLE"
+	if Mode==true then
+
+		Frames=RGBFrames
+		Label="RGB"
+		RGBMode=true
+
+	elseif Mode=="customba" then
+
+		Frames=CustomBAFrames
+		Label="CUSTOM BA"
+		RGBMode=false
+
+	else
+
+		Frames=BadAppleFrames
+		Label="BAD APPLE"
+		RGBMode=false
+
+	end
 
 	local FirstMainFrame=true
 
@@ -3705,6 +4046,9 @@ local function PlayMode(
 
 	PlayRGBButton.Text=
 		"PLAY CUSTOM RGB"
+
+	PlayCustomBAButton.Text=
+		"PLAY CUSTOM BA"
 
 	StopRequested=false
 
@@ -3792,8 +4136,8 @@ BrightnessButton.Activated:Connect(function()
 
 	BrightnessBox.Text=
 		tostring(
-			CUSTOM_BRIGHTNESS
-		)
+		CUSTOM_BRIGHTNESS
+	)
 
 	BrightnessWindow.Visible=
 		true
@@ -3944,6 +4288,29 @@ PlayRGBButton.Activated:Connect(function()
 
 end)
 
+PlayCustomBAButton.Activated:Connect(function()
+
+	if
+		Playing
+		or
+		Building
+		or
+		Scanning
+		or
+		Deleting
+	then
+
+		return
+
+	end
+
+	task.spawn(
+		PlayMode,
+		"customba"
+	)
+
+end)
+
 RGBURLButton.Activated:Connect(function()
 
 	if
@@ -4009,6 +4376,71 @@ ConfirmButton.Activated:Connect(function()
 
 end)
 
+BAURLButton.Activated:Connect(function()
+
+	if
+		Playing
+		or
+		Building
+		or
+		Scanning
+		or
+		Deleting
+	then
+
+		return
+
+	end
+
+	BAURLBox.Text=
+		CUSTOM_BA_URL
+
+	BAURLWindow.Visible=true
+
+	BAURLBox:CaptureFocus()
+
+end)
+
+BAConfirmButton.Activated:Connect(function()
+
+	local NewURL=
+		BAURLBox.Text
+
+	NewURL=
+		NewURL:gsub(
+			"^%s+",
+			""
+		)
+
+	NewURL=
+		NewURL:gsub(
+			"%s+$",
+			""
+		)
+
+	if
+		NewURL==""
+	then
+
+		Status.Text=
+			"BA URL EMPTY"
+
+		return
+
+	end
+
+	CUSTOM_BA_URL=
+		NewURL
+
+	CustomBAFrames=nil
+
+	BAURLWindow.Visible=false
+
+	Status.Text=
+		"BA URL UPDATED"
+
+end)
+
 ScanButton.Activated:Connect(function()
 
 	if
@@ -4060,6 +4492,7 @@ StopButton.Activated:Connect(function()
 	IDWindow.Visible=false
 	BrightnessWindow.Visible=false
 	URLWindow.Visible=false
+	BAURLWindow.Visible=false
 
 	Status.Text=
 		"STOPPING..."
@@ -4069,6 +4502,9 @@ StopButton.Activated:Connect(function()
 
 	PlayRGBButton.Text=
 		"PLAY CUSTOM RGB"
+
+	PlayCustomBAButton.Text=
+		"PLAY CUSTOM BA"
 
 end)
 
@@ -4150,4 +4586,9 @@ print(
 print(
 	"RGB URL:",
 	RGB_URL
+)
+
+print(
+	"Custom BA URL:",
+	CUSTOM_BA_URL
 )
