@@ -85,7 +85,12 @@ local Building=false
 local Playing=false
 local Scanning=false
 local Deleting=false
+local SettingPos=false
 local StopRequested=false
+
+local PendingStartX=0
+local PendingStartY=0
+local PendingStartZ=0
 
 local RunToken=0
 
@@ -466,6 +471,11 @@ local RGBURLButton=
 local BAURLButton=
 	MakeButton(
 		"CUSTOM BA URL"
+	)
+
+local SetPosButton=
+	MakeButton(
+		"SET POS"
 	)
 
 local ScanButton=
@@ -1384,6 +1394,172 @@ BAConfirmCorner.CornerRadius=
 BAConfirmCorner.Parent=
 	BAConfirmButton
 
+-- ========== SET POS Confirm Window ==========
+local PosWindow=
+	Instance.new("Frame")
+
+PosWindow.Size=
+	UDim2.new(0.90,0,0,175)
+
+PosWindow.Position=
+	UDim2.new(0.5,0,0.5,0)
+
+PosWindow.AnchorPoint=
+	Vector2.new(0.5,0.5)
+
+PosWindow.BackgroundColor3=
+	Color3.fromRGB(20,20,26)
+
+PosWindow.BorderSizePixel=0
+PosWindow.Visible=false
+PosWindow.ZIndex=25
+PosWindow.Parent=Gui
+
+local PosConstraint=
+	Instance.new("UISizeConstraint")
+
+PosConstraint.MinSize=
+	Vector2.new(280,160)
+
+PosConstraint.MaxSize=
+	Vector2.new(500,200)
+
+PosConstraint.Parent=PosWindow
+
+local PosCorner=
+	Instance.new("UICorner")
+
+PosCorner.CornerRadius=
+	UDim.new(0,12)
+
+PosCorner.Parent=PosWindow
+
+local PosTitle=
+	Instance.new("TextLabel")
+
+PosTitle.Size=
+	UDim2.new(1,-20,0,28)
+
+PosTitle.Position=
+	UDim2.fromOffset(10,8)
+
+PosTitle.BackgroundTransparency=1
+PosTitle.Text="SET BUILD ORIGIN"
+
+PosTitle.TextColor3=
+	Color3.new(1,1,1)
+
+PosTitle.TextSize=13
+PosTitle.Font=Enum.Font.GothamBold
+PosTitle.TextXAlignment=Enum.TextXAlignment.Left
+PosTitle.ZIndex=26
+PosTitle.Parent=PosWindow
+
+local PosCoordLabel=
+	Instance.new("TextLabel")
+
+PosCoordLabel.Size=
+	UDim2.new(1,-20,0,36)
+
+PosCoordLabel.Position=
+	UDim2.fromOffset(10,40)
+
+PosCoordLabel.BackgroundTransparency=1
+PosCoordLabel.Text="X: 0  Y: 0  Z: 0"
+
+PosCoordLabel.TextColor3=
+	Color3.fromRGB(180,220,180)
+
+PosCoordLabel.TextSize=14
+PosCoordLabel.Font=Enum.Font.Code
+PosCoordLabel.TextXAlignment=Enum.TextXAlignment.Left
+PosCoordLabel.ZIndex=26
+PosCoordLabel.Parent=PosWindow
+
+local PosHint=
+	Instance.new("TextLabel")
+
+PosHint.Size=
+	UDim2.new(1,-20,0,20)
+
+PosHint.Position=
+	UDim2.fromOffset(10,78)
+
+PosHint.BackgroundTransparency=1
+PosHint.Text="Bottom-left corner of 51×39 grid"
+
+PosHint.TextColor3=
+	Color3.fromRGB(150,150,160)
+
+PosHint.TextSize=10
+PosHint.Font=Enum.Font.Code
+PosHint.TextXAlignment=Enum.TextXAlignment.Left
+PosHint.ZIndex=26
+PosHint.Parent=PosWindow
+
+local PosConfirmBtn=
+	Instance.new("TextButton")
+
+PosConfirmBtn.Size=
+	UDim2.fromOffset(110,32)
+
+PosConfirmBtn.Position=
+	UDim2.new(0.5,10,1,-42)
+
+PosConfirmBtn.BackgroundColor3=
+	Color3.fromRGB(50,120,60)
+
+PosConfirmBtn.BorderSizePixel=0
+PosConfirmBtn.Text="CONFIRM"
+
+PosConfirmBtn.TextColor3=
+	Color3.new(1,1,1)
+
+PosConfirmBtn.TextSize=11
+PosConfirmBtn.Font=Enum.Font.GothamBold
+PosConfirmBtn.ZIndex=26
+PosConfirmBtn.Parent=PosWindow
+
+local PosConfirmCorner=
+	Instance.new("UICorner")
+
+PosConfirmCorner.CornerRadius=
+	UDim.new(0,8)
+
+PosConfirmCorner.Parent=PosConfirmBtn
+
+local PosCancelBtn=
+	Instance.new("TextButton")
+
+PosCancelBtn.Size=
+	UDim2.fromOffset(110,32)
+
+PosCancelBtn.Position=
+	UDim2.new(0.5,-120,1,-42)
+
+PosCancelBtn.BackgroundColor3=
+	Color3.fromRGB(80,50,50)
+
+PosCancelBtn.BorderSizePixel=0
+PosCancelBtn.Text="CANCEL"
+
+PosCancelBtn.TextColor3=
+	Color3.new(1,1,1)
+
+PosCancelBtn.TextSize=11
+PosCancelBtn.Font=Enum.Font.GothamBold
+PosCancelBtn.ZIndex=26
+PosCancelBtn.Parent=PosWindow
+
+local PosCancelCorner=
+	Instance.new("UICorner")
+
+PosCancelCorner.CornerRadius=
+	UDim.new(0,8)
+
+PosCancelCorner.Parent=PosCancelBtn
+-- ============================================
+
 local Dragging=false
 local DragStart=nil
 local WindowStart=nil
@@ -1528,6 +1704,291 @@ local function GridToWorld(X,Y,Z)
 		)
 
 end
+
+-- ========== SET POS system ==========
+local Mouse=Player:GetMouse()
+
+local PosPreview=
+	Instance.new("Part")
+
+PosPreview.Name="SetPosPreview"
+PosPreview.Size=
+	Vector3.new(
+		GRANDEUR_BLOC,
+		GRANDEUR_BLOC,
+		GRANDEUR_BLOC
+	)
+PosPreview.Anchored=true
+PosPreview.CanCollide=false
+PosPreview.CanQuery=false
+PosPreview.CanTouch=false
+PosPreview.Material=Enum.Material.Neon
+PosPreview.Color=
+	Color3.fromRGB(40,220,80)
+PosPreview.Transparency=0.45
+PosPreview.CastShadow=false
+PosPreview.Parent=nil
+
+local PosSelectionBox=
+	Instance.new("SelectionBox")
+
+PosSelectionBox.Adornee=PosPreview
+PosSelectionBox.Color3=
+	Color3.fromRGB(40,255,100)
+PosSelectionBox.LineThickness=0.05
+PosSelectionBox.Transparency=0.2
+PosSelectionBox.Parent=PosPreview
+
+local function ExitSetPosMode()
+
+	SettingPos=false
+	PosPreview.Parent=nil
+	PosWindow.Visible=false
+	SetPosButton.Text="SET POS"
+
+	if not Building
+		and not Playing
+		and not Scanning
+		and not Deleting
+	then
+		Status.Text=
+			string.format(
+				"ORIGIN %d %d %d",
+				START_X,
+				START_Y,
+				START_Z
+			)
+	end
+
+end
+
+local function GetGridFromMouse()
+
+	local Target=Mouse.Target
+	local Hit=Mouse.Hit
+
+	if not Hit then
+		return nil
+	end
+
+	local WorldPos=Hit.Position
+
+	-- Kalau klik surface atas, naikkan sedikit biar grid cell di atas permukaan
+	if Target and Target:IsA("BasePart") then
+		local Normal=Mouse.TargetSurface
+		if Normal==Enum.NormalId.Top then
+			WorldPos=
+				WorldPos+
+				Vector3.new(0,GRANDEUR_BLOC*0.1,0)
+		end
+	end
+
+	local Grid=PosMonde2Grille(WorldPos)
+
+	-- Baseplate di Y-1 → force Y=0
+	if Grid.Y<0 then
+		Grid=Vector3.new(Grid.X,0,Grid.Z)
+	end
+
+	-- Clamp ke range map 0–255
+	local X=
+		math.clamp(
+			math.floor(Grid.X),
+			0,
+			255
+		)
+	local Y=
+		math.clamp(
+			math.floor(Grid.Y),
+			0,
+			255
+		)
+	local Z=
+		math.clamp(
+			math.floor(Grid.Z),
+			0,
+			255
+		)
+
+	return Vector3.new(X,Y,Z)
+
+end
+
+local function UpdatePosPreview()
+
+	if not SettingPos then
+		return
+	end
+
+	local Grid=GetGridFromMouse()
+
+	if not Grid then
+		PosPreview.Parent=nil
+		return
+	end
+
+	local World=
+		GridToWorld(
+			Grid.X,
+			Grid.Y,
+			Grid.Z
+		)
+
+	PosPreview.CFrame=
+		CFrame.new(World)
+
+	PosPreview.Parent=workspace
+
+	Status.Text=
+		string.format(
+			"SET POS  %d  %d  %d  (click)",
+			Grid.X,
+			Grid.Y,
+			Grid.Z
+		)
+
+end
+
+local function OpenPosConfirm(Grid)
+
+	PendingStartX=Grid.X
+	PendingStartY=Grid.Y
+	PendingStartZ=Grid.Z
+
+	PosCoordLabel.Text=
+		string.format(
+			"X: %d   Y: %d   Z: %d",
+			Grid.X,
+			Grid.Y,
+			Grid.Z
+		)
+
+	PosWindow.Visible=true
+
+end
+
+local function EnterSetPosMode()
+
+	if Building
+		or Playing
+		or Scanning
+		or Deleting
+	then
+		Status.Text="BUSY"
+		return
+	end
+
+	if SettingPos then
+		ExitSetPosMode()
+		return
+	end
+
+	SettingPos=true
+	PosWindow.Visible=false
+	SetPosButton.Text="SET POS • CLICK..."
+	Status.Text="SET POS — click a cell"
+
+end
+
+game:GetService("RunService").RenderStepped:Connect(function()
+
+	if SettingPos and not PosWindow.Visible then
+		UpdatePosPreview()
+	end
+
+end)
+
+local LastSetPosClick=0
+
+local function TryConfirmSetPos()
+
+	if not SettingPos then
+		return
+	end
+
+	if PosWindow.Visible then
+		return
+	end
+
+	-- Debounce: cegah double-fire mouse + touch
+	local Now=os.clock()
+	if Now-LastSetPosClick<0.35 then
+		return
+	end
+	LastSetPosClick=Now
+
+	local Grid=GetGridFromMouse()
+
+	if not Grid then
+		return
+	end
+
+	OpenPosConfirm(Grid)
+
+end
+
+-- PC mouse
+Mouse.Button1Down:Connect(function()
+	TryConfirmSetPos()
+end)
+
+-- Touch mobile
+UserInputService.InputBegan:Connect(function(Input, GameProcessed)
+
+	if GameProcessed then
+		return
+	end
+
+	if not SettingPos then
+		return
+	end
+
+	if Input.UserInputType==Enum.UserInputType.Touch then
+		task.wait()
+		TryConfirmSetPos()
+	end
+
+end)
+
+UserInputService.TouchTap:Connect(function(_, GameProcessed)
+
+	if GameProcessed then
+		return
+	end
+
+	if not SettingPos then
+		return
+	end
+
+	task.wait()
+	TryConfirmSetPos()
+
+end)
+
+UserInputService.TouchStarted:Connect(function(_, GameProcessed)
+
+	if GameProcessed then
+		return
+	end
+
+	if SettingPos and not PosWindow.Visible then
+		UpdatePosPreview()
+	end
+
+end)
+
+UserInputService.TouchMoved:Connect(function(_, GameProcessed)
+
+	if GameProcessed then
+		return
+	end
+
+	if SettingPos and not PosWindow.Visible then
+		UpdatePosPreview()
+	end
+
+end)
+-- ====================================
 
 local function Position2CodePosition(
 	Position
@@ -1686,103 +2147,90 @@ end
 
 local function CacheBoxesFromWorkspace()
 
-	local Found=0
+	local Candidates = {}
 
-	for _,Object in
-		ipairs(
-			Blocs:GetDescendants()
-		)
-	do
+	for _, Object in ipairs(Blocs:GetDescendants()) do
+		if Object:IsA("BasePart") and Object.Name == "Box" then
+			local Grid = PosMonde2Grille(Object.Position)
+			local X, Y, Z = Grid.X, Grid.Y, Grid.Z
+			local Expected = GridToWorld(X, Y, Z)
 
-		if
-			Object:IsA("BasePart")
-			and
-			Object.Name=="Box"
-		then
-
-			local Grid=
-				PosMonde2Grille(
-					Object.Position
-				)
-
-			local X=Grid.X
-			local Y=Grid.Y
-			local Z=Grid.Z
-
-			if
-				X>=START_X
-				and
-				X<START_X+X_SIZE
-				and
-				Y>=START_Y
-				and
-				Y<START_Y+Y_SIZE
-				and
-				Z==START_Z
-			then
-
-				local Expected=
-					GridToWorld(
-						X,
-						Y,
-						Z
-					)
-
-				if
-					(
-						Object.Position-
-						Expected
-					).Magnitude<=
-					SCAN_RADIUS
-				then
-
-					local Key=
-						string.format(
-							"%d_%d_%d",
-							X,
-							Y,
-							Z
-						)
-
-					if not Blocks[Key] then
-
-						local Block=
-							GetObjFromBox(
-								Object
-							)
-
-						if Block then
-
-							Blocks[Key]=
-								{
-									x=X,
-									y=Y,
-									z=Z,
-									key=Key,
-
-									code=
-										Position2CodePosition(
-											Grid
-										),
-
-									world=Expected,
-
-									box=Object,
-									block=Block
-								}
-
-							Found+=1
-
-						end
-
-					end
-
+			if (Object.Position - Expected).Magnitude <= SCAN_RADIUS then
+				local Block = GetObjFromBox(Object)
+				if Block then
+					table.insert(Candidates, {
+						x = X,
+						y = Y,
+						z = Z,
+						box = Object,
+						block = Block,
+						world = Expected
+					})
 				end
-
 			end
-
 		end
+	end
 
+	if #Candidates == 0 then
+		return 0
+	end
+
+	-- Cari Z yang paling sering muncul (bidang datar)
+	local ZCount = {}
+	for _, C in ipairs(Candidates) do
+		ZCount[C.z] = (ZCount[C.z] or 0) + 1
+	end
+
+	local BestZ, BestCount = nil, 0
+	for Z, Count in pairs(ZCount) do
+		if Count > BestCount then
+			BestZ = Z
+			BestCount = Count
+		end
+	end
+
+	-- Ambil kandidat di Z terbaik, cari minX / minY
+	local MinX, MinY = math.huge, math.huge
+	local Plane = {}
+
+	for _, C in ipairs(Candidates) do
+		if C.z == BestZ then
+			table.insert(Plane, C)
+			if C.x < MinX then MinX = C.x end
+			if C.y < MinY then MinY = C.y end
+		end
+	end
+
+	-- Update origin grid ke posisi aktual setelah dipindah
+	START_X = MinX
+	START_Y = MinY
+	START_Z = BestZ
+
+	table.clear(Blocks)
+	local Found = 0
+
+	for _, C in ipairs(Plane) do
+		local LocalX = C.x - START_X
+		local LocalY = C.y - START_Y
+
+		-- Hanya terima yang masih dalam ukuran 51×39
+		if LocalX >= 0 and LocalX < X_SIZE
+			and LocalY >= 0 and LocalY < Y_SIZE
+		then
+			local Key = string.format("%d_%d_%d", C.x, C.y, C.z)
+
+			Blocks[Key] = {
+				x = C.x,
+				y = C.y,
+				z = C.z,
+				key = Key,
+				code = Position2CodePosition(Vector3.new(C.x, C.y, C.z)),
+				world = C.world,
+				box = C.box,
+				block = C.block
+			}
+			Found += 1
+		end
 	end
 
 	return Found
@@ -1902,6 +2350,8 @@ local function BuildGrid()
 		Scanning
 		or
 		Deleting
+		or
+		SettingPos
 	then
 
 		Status.Text="BUSY"
@@ -2242,6 +2692,8 @@ local function DeleteAllBlocks()
 		Playing
 		or
 		Scanning
+		or
+		SettingPos
 	then
 
 		return
@@ -2253,61 +2705,42 @@ local function DeleteAllBlocks()
 	local Token=
 		NewRunToken()
 
-	table.clear(
-		Blocks
-	)
+	-- Seperti paint: pakai cache Instance yang sudah diingat.
+	-- Jangan clear + re-scan dulu, biar tetap bisa delete setelah dipindah tool.
+	local Found = 0
+	for _ in pairs(Blocks) do
+		Found += 1
+	end
 
-	Status.Text=
-		"SCANNING BLOCKS..."
-
-	local Found=
-		CacheBoxesFromWorkspace()
+	if Found <= 0 then
+		-- Cache kosong → baru scan
+		Status.Text = "SCANNING BLOCKS..."
+		Found = CacheBoxesFromWorkspace()
+	else
+		Status.Text = string.format("USING CACHED %d BLOCKS", Found)
+	end
 
 	if IsCancelled(Token) then
-
-		Deleting=false
-		Status.Text="STOPPED"
-
+		Deleting = false
+		Status.Text = "STOPPED"
 		return
-
 	end
 
-	if
-		Found<=0
-	then
-
-		Deleting=false
-		Status.Text="NO BLOCK FOUND"
-
+	if Found <= 0 then
+		Deleting = false
+		Status.Text = "NO BLOCK FOUND"
 		return
-
 	end
 
-	local List=
-		table.create(
-			Found
-		)
+	local List = table.create(Found)
+	local Count = 0
 
-	local Count=0
-
-	for _,Data in
-		pairs(Blocks)
-	do
-
-		if
-			Data
-			and
-			Data.block
-			and
-			Data.block.Parent==
-				Blocs
-		then
-
-			Count+=1
-			List[Count]=Data
-
+	for _, Data in pairs(Blocks) do
+		-- Instance masih hidup & masih di folder Blocs (meski posisinya sudah dipindah)
+		if Data and Data.block and Data.block.Parent == Blocs then
+			Count += 1
+			List[Count] = Data
 		end
-
 	end
 
 	if
@@ -2521,6 +2954,8 @@ local function ScanBlocks()
 		Playing
 		or
 		Deleting
+		or
+		SettingPos
 	then
 
 		return
@@ -3818,6 +4253,8 @@ local function PlayMode(
 		Scanning
 		or
 		Deleting
+		or
+		SettingPos
 	then
 
 		return
@@ -4376,6 +4813,56 @@ ConfirmButton.Activated:Connect(function()
 
 end)
 
+SetPosButton.Activated:Connect(function()
+
+	if Building
+		or Playing
+		or Scanning
+		or Deleting
+	then
+		return
+	end
+
+	EnterSetPosMode()
+
+end)
+
+PosConfirmBtn.Activated:Connect(function()
+
+	START_X=PendingStartX
+	START_Y=PendingStartY
+	START_Z=PendingStartZ
+
+	table.clear(Blocks)
+	table.clear(PreviousPixels)
+
+	ExitSetPosMode()
+
+	Status.Text=
+		string.format(
+			"ORIGIN SET  %d %d %d",
+			START_X,
+			START_Y,
+			START_Z
+		)
+
+	print(
+		"ORIGIN:",
+		START_X,
+		START_Y,
+		START_Z
+	)
+
+end)
+
+PosCancelBtn.Activated:Connect(function()
+
+	PosWindow.Visible=false
+	Status.Text=
+		"SET POS — click a cell"
+
+end)
+
 BAURLButton.Activated:Connect(function()
 
 	if
@@ -4493,6 +4980,11 @@ StopButton.Activated:Connect(function()
 	BrightnessWindow.Visible=false
 	URLWindow.Visible=false
 	BAURLWindow.Visible=false
+	PosWindow.Visible=false
+
+	if SettingPos then
+		ExitSetPosMode()
+	end
 
 	Status.Text=
 		"STOPPING..."
