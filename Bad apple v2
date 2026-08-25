@@ -35,12 +35,12 @@ if not FauxBlocsDetruits then
 
 end
 
-local BLOCK_ID="79"
+local BLOCK_ID="143"
 
 local GRANDEUR_BLOC=3
 
-local X_SIZE=51
-local Y_SIZE=39
+local X_SIZE=64
+local Y_SIZE=64
 local TOTAL_BLOCKS=
 	X_SIZE*Y_SIZE
 
@@ -71,8 +71,8 @@ local PAINT_WORKERS=127
 local BUILD_WORKERS=1024
 local BUILD_BATCH=1028
 
-local DELETE_WORKERS=256
-local DELETE_BATCH=512
+local DELETE_WORKERS=512
+local DELETE_BATCH=1024
 
 local CUSTOM_BRIGHTNESS=0
 
